@@ -1,0 +1,22 @@
+html, body, #app {
+  margin: 0;
+  min-height: 100%;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #edf6ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+body {
+  margin: 0;
+}
