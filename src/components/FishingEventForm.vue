@@ -41,7 +41,7 @@ defineEmits<{ submit: [] }>()
         <div class="select is-fullwidth">
           <select v-model="form.waterId">
             <option v-for="water in waters" :key="water.id" :value="water.id">
-              {{ water.name }} ({{ water.location }})
+              {{ water.location ? `${water.name} (${water.location})` : water.name }}
             </option>
           </select>
         </div>

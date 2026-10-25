@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CatchView from './components/CatchView.vue'
 import FishingEventForm from './components/FishingEventForm.vue'
 import GearView from './components/GearView.vue'
@@ -20,6 +20,11 @@ import type {
   WaterForm
 } from './types'
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
 const defaultSpecies: FishSpecies[] = [
   { id: 'rotauge', name: 'Rotauge' },
   { id: 'sander', name: 'Sander' },
@@ -30,9 +35,14 @@ const defaultSpecies: FishSpecies[] = [
 ]
 
 const defaultWaters: Water[] = [
-  { id: 'see-1', name: 'Baggersee', location: 'München' },
-  { id: 'fluss-1', name: 'Isar', location: 'Freising' },
-  { id: 'teich-1', name: 'Mühlteich', location: 'Augsburg' }
+  { id: 'autobahnweiher', name: 'Autobahnweiher', location: '' },
+  { id: 'grosse-ledder', name: 'Große Ledder', location: '' },
+  { id: 'grosser-silbersee', name: 'Großer Silbersee', location: '' },
+  { id: 'hitdorfersee-nord', name: 'Hitdorfersee Nord', location: '' },
+  { id: 'kleiner-dehlensee', name: 'Kleiner Dehlensee', location: '' },
+  { id: 'rheinhafen-hitdorf', name: 'Rheinhafen Hitdorf', location: '' },
+  { id: 'stoeckenbergsee', name: 'Stöckenbergsee', location: '' },
+  { id: 'wupper', name: 'Wupper', location: '' }
 ]
 
 const defaultRods: Rod[] = [
@@ -83,6 +93,7 @@ const createCatchForm = (): CatchForm => ({
   notes: ''
 })
 const catchForm = ref<CatchForm>(createCatchForm())
+const installPrompt = ref<BeforeInstallPromptEvent | null>(null)
 
 const loadData = () => {
   const raw = localStorage.getItem(storageKey)
@@ -273,6 +284,29 @@ const cancelCatchEdit = () => {
 
 watch(selectedSessionId, cancelCatchEdit)
 
+const onBeforeInstallPrompt = (event: Event) => {
+  event.preventDefault()
+  installPrompt.value = event as BeforeInstallPromptEvent
+}
+
+const onAppInstalled = () => {
+  installPrompt.value = null
+}
+
+const installApp = async () => {
+  if (!installPrompt.value) return
+
+  const prompt = installPrompt.value
+  try {
+    await prompt.prompt()
+    await prompt.userChoice
+  } catch (error) {
+    console.error('Die Installation des Fangbuchs konnte nicht gestartet werden.', error)
+  } finally {
+    installPrompt.value = null
+  }
+}
+
 const selectedSession = computed(() =>
   sessions.value.find((session) => session.id === selectedSessionId.value) ?? null
 )
@@ -286,7 +320,16 @@ const biggestCatch = computed(() => {
   return [...catches.value].sort((a, b) => b.lengthCm - a.lengthCm)[0] ?? null
 })
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+  window.addEventListener('appinstalled', onAppInstalled)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+  window.removeEventListener('appinstalled', onAppInstalled)
+})
 </script>
 
 <template>
@@ -298,6 +341,14 @@ onMounted(loadData)
           <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'waters'">Gewässer</button>
           <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'gear'">Köder &amp; Ruten</button>
           <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'summary'">Übersicht</button>
+          <button
+            v-if="installPrompt"
+            class="navbar-item button is-primary is-inverted is-light"
+            type="button"
+            @click="installApp"
+          >
+            App installieren
+          </button>
         </div>
       </div>
     </nav>

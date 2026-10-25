@@ -31,7 +31,7 @@ defineEmits<{ submit: [] }>()
           <tbody>
             <tr v-for="water in waters" :key="water.id">
               <td>{{ water.name }}</td>
-              <td>{{ water.location }}</td>
+              <td>{{ water.location || '–' }}</td>
             </tr>
           </tbody>
         </table>
