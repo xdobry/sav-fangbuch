@@ -15,6 +15,8 @@ Keine Registierung nötig.
 - Fänge nachträglich bearbeiten oder löschen
 - Eigene Gewässer, Ruten und Köder verwalten
 - Übersicht mit Fangzahl, Gesamtgewicht und größtem Fang
+- Fangbuchdaten als JSON exportieren und Touren sowie Fänge per JSON zusammenführen
+- Touren und Fänge als flache CSV-Datei exportieren
 - Daten automatisch im lokalen Browserspeicher sichern
 - Als Progressive Web App installieren und die App-Oberfläche offline öffnen
 

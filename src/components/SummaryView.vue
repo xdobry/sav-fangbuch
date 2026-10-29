@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Bait, CatchEntry, FishSpecies, FishingSession, Rod, Water } from '../types'
 
 defineProps<{
@@ -11,13 +12,46 @@ defineProps<{
   species: FishSpecies[]
   rods: Rod[]
   baits: Bait[]
+  dataMessage: string
 }>()
+
+const emit = defineEmits<{
+  exportJson: []
+  exportCsv: []
+  importData: [file: File]
+}>()
+const importInput = ref<HTMLInputElement | null>(null)
+
+const onImportSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (file) emit('importData', file)
+  input.value = ''
+}
 </script>
 
 <template>
   <section class="section">
     <div class="container">
       <h1 class="title is-4">Übersicht</h1>
+
+      <div class="box">
+        <h2 class="subtitle is-6">Daten</h2>
+        <div class="buttons">
+          <button class="button is-primary" type="button" @click="emit('exportJson')">Export JSON</button>
+          <button class="button" type="button" @click="importInput?.click()">Import Data</button>
+          <button class="button" type="button" @click="emit('exportCsv')">Export CSV</button>
+          <input
+            ref="importInput"
+            class="is-hidden"
+            type="file"
+            accept="application/json,.json"
+            aria-label="JSON-Datei zum Import auswählen"
+            @change="onImportSelected"
+          />
+        </div>
+        <p v-if="dataMessage" class="help" role="status">{{ dataMessage }}</p>
+      </div>
 
       <div class="columns is-multiline">
         <div class="column is-one-third">
