@@ -2,10 +2,16 @@
 
 Ein einfaches, deutschsprachiges digitales Fangbuch. Die Vue-Anwendung hilft dabei, Angeltermine und Fänge zu erfassen und den Überblick über Gewässer und Ausrüstung zu behalten.
 
+https://xdobry.github.io/sav-fangbuch/
+
+Es funktioniert in browser. Die Daten sind nur auf dem browser. Es gibt keinen Server.
+Keine Registierung nötig.
+
 ## Funktionen
 
-- Angeltermine mit Zeitraum, Gewässer und Wetterdaten erfassen
-- Fänge einem Angeltermin zuordnen und mit Fischart, Länge, Gewicht, Rute, Köder, Foto und Notizen dokumentieren
+- Touren mit Zeitraum, Gewässer und Wetterdaten erfassen
+- Startseite mit aktiver Tour, schnellem Fang erfassen und den letzten zehn Fängen
+- Fänge einer Tour zuordnen und mit Fischart, Länge, Gewicht, Rute, Köder, Foto und Notizen dokumentieren
 - Fänge nachträglich bearbeiten oder löschen
 - Eigene Gewässer, Ruten und Köder verwalten
 - Übersicht mit Fangzahl, Gesamtgewicht und größtem Fang
@@ -49,10 +55,10 @@ Für eine GitHub-Projektseite muss der Build-Pfad dem Repository-Namen entsprech
 npm run build:pages -- --base=/REPOSITORYNAME/
 ```
 
-Beispiel für `https://BENUTZER.github.io/fangbuch/`:
+Beispiel für `https://xdobry.github.io/sav-fangbuch/`:
 
 ```sh
-npm run build:pages -- --base=/fangbuch/
+npm run build:pages -- --base=/sav-fangbuch/
 ```
 
 Der fertige Build liegt danach in `dist/`. Diesen Ordner als GitHub-Pages-Artefakt veröffentlichen. Für eine GitHub-Seite unter der Domain-Wurzel (`https://BENUTZER.github.io/`) genügt `npm run build:pages`.

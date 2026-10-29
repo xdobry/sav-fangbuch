@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { Bait, CatchEntry, CatchForm, FishSpecies, FishingSession, Montage, Rod, Water } from '../types'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   waters: Water[]
   species: FishSpecies[]
   rods: Rod[]
@@ -11,7 +11,12 @@ defineProps<{
   catches: CatchEntry[]
   session: FishingSession
   editingCatchId: string | null
-}>()
+  showCatchList?: boolean
+  showCancel?: boolean
+}>(), {
+  showCatchList: true,
+  showCancel: false
+})
 const form = defineModel<CatchForm>({ required: true })
 const isGettingPosition = ref(false)
 const positionMessage = ref('')
@@ -90,12 +95,16 @@ const submitCatch = () => {
   if (coordinateError.value) return
   emit('submit')
 }
+
+onMounted(() => {
+  if (!props.editingCatchId) getCurrentPosition()
+})
 </script>
 
 <template>
   <div class="box">
     <h2 class="subtitle is-6">
-      {{ editingCatchId ? 'Fischfang bearbeiten' : 'Fischfang für dieses Angelereignis erfassen' }}
+      {{ editingCatchId ? 'Fischfang bearbeiten' : 'Fischfang für diese Tour erfassen' }}
     </h2>
     <p class="mb-4">
       Gewässer: {{ waters.find((water) => water.id === session.waterId)?.name ?? 'Unbekannt' }}
@@ -221,11 +230,18 @@ const submitCatch = () => {
       <button class="button is-link" @click="submitCatch">
         {{ editingCatchId ? 'Änderungen speichern' : 'Fang speichern' }}
       </button>
-      <button v-if="editingCatchId" class="button" @click="$emit('cancelEdit')">Abbrechen</button>
+      <button
+        v-if="editingCatchId || props.showCancel"
+        class="button"
+        type="button"
+        @click="$emit('cancelEdit')"
+      >
+        Abbrechen
+      </button>
     </div>
   </div>
 
-  <div class="box">
+  <div v-if="props.showCatchList" class="box">
     <h2 class="subtitle is-6">Erfasste Fänge</h2>
     <div v-if="catches.length === 0" class="has-text-grey">Noch keine Fänge erfasst.</div>
     <div v-else class="content">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import CatchView from './components/CatchView.vue'
 import FishingEventForm from './components/FishingEventForm.vue'
 import GearView from './components/GearView.vue'
@@ -28,12 +28,54 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const defaultSpecies: FishSpecies[] = [
-  { id: 'rotauge', name: 'Rotauge' },
-  { id: 'sander', name: 'Sander' },
+  { id: 'aal', name: 'Aal' },
+  { id: 'aland', name: 'Aland' },
+  { id: 'aeschе', name: 'Äsche' },
+  { id: 'bachforelle', name: 'Bachforelle' },
+  { id: 'bachneunauge', name: 'Bachneunauge' },
+  { id: 'bachsaibling', name: 'Bachsaibling' },
+  { id: 'barbe', name: 'Barbe' },
+  { id: 'bitterling', name: 'Bitterling' },
+  { id: 'brasse', name: 'Brasse' },
+  { id: 'doebel', name: 'Döbel' },
+  { id: 'dreistachliger-stichling', name: 'Dreistachliger Stichling' },
+  { id: 'elritze', name: 'Elritze' },
+  // { id: 'flunder', name: 'Flunder' },
+  { id: 'flussbarsch', name: 'Flussbarsch' },
+  //{ id: 'flussneunauge', name: 'Flussneunauge' },
+  { id: 'giebel', name: 'Giebel' },
+  { id: 'groesse', name: 'Groppe (Mühlkoppe)' },
+  { id: 'gruendling', name: 'Gründling' },
+  { id: 'guester', name: 'Güster' },
+  { id: 'hasel', name: 'Hasel' },
   { id: 'hecht', name: 'Hecht' },
-  { id: 'barsch', name: 'Barsch' },
-  { id: 'karpfen', name: 'Karpfen' },
-  { id: 'zander', name: 'Zander' }
+  { id: 'kabeljau', name: 'Kabeljau (Dorsch)' },
+  { id: 'kaulbarsch', name: 'Kaulbarsch' },
+  { id: 'karausche', name: 'Karausche' },
+  { id: 'karpfen', name: 'Wildkarpfen' },
+  { id: 'kessler-grundel', name: 'Kessler-Grundel' },
+  { id: 'lachs', name: 'Lachs' },
+  { id: 'maifisch', name: 'Maifisch' },
+  // { id: 'makrele', name: 'Makrele' },
+  // { id: 'meerforelle', name: 'Meerforelle' },
+  { id: 'moderlieschen', name: 'Moderlieschen' },
+  { id: 'nase', name: 'Nase' },
+  { id: 'nordseeschnaepel', name: 'Nordseeschnäpel' },
+  { id: 'quappe', name: 'Quappe (Rutte)' },
+  { id: 'rapfen', name: 'Rapfen' },
+  { id: 'regenbogenforelle', name: 'Regenbogenforelle' },
+  { id: 'rotauge', name: 'Rotauge' },
+  { id: 'rotfeder', name: 'Rotfeder' },
+  { id: 'schlammpeitzger', name: 'Schlammpeitzger' },
+  { id: 'schleie', name: 'Schleie' },
+  { id: 'schmerle', name: 'Schmerle' },
+  { id: 'schneider', name: 'Schneider' },
+  { id: 'steinbeisser', name: 'Steinbeißer' },
+  { id: 'ukelei', name: 'Ukelei (Laube)' },
+  { id: 'wels', name: 'Wels' },
+  { id: 'zander', name: 'Zander' },
+  { id: 'zaehrte', name: 'Zährte' },
+  { id: 'zwergstichling', name: 'Zwergstichling' },
 ]
 
 const defaultWaters: Water[] = [
@@ -82,15 +124,17 @@ const defaultMontages: Montage[] = [
 ]
 
 const storageKey = 'fangbuch-data-v1'
+const getLocalDateTime = (date = new Date()) =>
+  new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 const waters = ref<Water[]>(defaultWaters)
-const species = ref<FishSpecies[]>(defaultSpecies)
+const species = defaultSpecies
 const rods = ref<Rod[]>(defaultRods)
 const baits = ref<Bait[]>(defaultBaits)
 const montages = ref<Montage[]>(defaultMontages)
 const sessions = ref<FishingSession[]>([])
 const catches = ref<CatchEntry[]>([])
 
-const activeTab = ref<'events' | 'masterdata' | 'summary'>('events')
+const activeTab = ref<'home' | 'events' | 'masterdata' | 'summary'>('home')
 const activeMasterData = ref<'waters' | 'rods' | 'baits' | 'montages'>('waters')
 const masterDataItems = [
   { id: 'waters', label: 'Gewässer' },
@@ -99,6 +143,13 @@ const masterDataItems = [
   { id: 'montages', label: 'Montagen' }
 ] as const
 const selectedSessionId = ref('')
+const expandedSessionId = ref('')
+const isStartingTour = ref(false)
+const isCreatingTour = ref(false)
+const editingSessionId = ref<string | null>(null)
+const isEnteringCatch = ref(false)
+const homeMessage = ref('')
+const tourMessage = ref('')
 const editingCatchId = ref<string | null>(null)
 const editingWaterId = ref<string | null>(null)
 const editingRodId = ref<string | null>(null)
@@ -118,19 +169,24 @@ const sessionForm = ref<FishingSessionForm>({
   precipitation: 'Kein',
   waterId: defaultWaters[0]?.id ?? ''
 })
-const createCatchForm = (): CatchForm => ({
-  time: new Date().toISOString().slice(0, 16),
-  speciesId: species.value[0]?.id ?? '',
-  lengthCm: 35,
-  weightKg: 1.2,
-  rodId: rods.value[0]?.id ?? '',
-  baitId: baits.value[0]?.id ?? '',
-  montageId: montages.value[0]?.id ?? '',
-  montageWeight: 0,
-  retained: false,
-  photo: '',
-  notes: ''
-})
+const latestCatch = () =>
+  [...catches.value].sort((first, second) => second.time.localeCompare(first.time))[0]
+const createCatchForm = (): CatchForm => {
+  const previousCatch = latestCatch()
+  return {
+    time: new Date().toISOString().slice(0, 16),
+    speciesId: previousCatch?.speciesId ?? species[0]?.id ?? '',
+    lengthCm: previousCatch?.lengthCm ?? 35,
+    weightKg: 1.2,
+    rodId: previousCatch?.rodId ?? rods.value[0]?.id ?? '',
+    baitId: previousCatch?.baitId ?? baits.value[0]?.id ?? '',
+    montageId: previousCatch?.montageId ?? montages.value[0]?.id ?? '',
+    montageWeight: 0,
+    retained: false,
+    photo: '',
+    notes: ''
+  }
+}
 const catchForm = ref<CatchForm>(createCatchForm())
 const installPrompt = ref<BeforeInstallPromptEvent | null>(null)
 
@@ -141,7 +197,6 @@ const loadData = () => {
   try {
     const parsed = JSON.parse(raw)
     waters.value = parsed.waters?.length ? parsed.waters : defaultWaters
-    species.value = parsed.species?.length ? parsed.species : defaultSpecies
     rods.value = parsed.rods?.length ? parsed.rods : defaultRods
     baits.value = parsed.baits?.length ? parsed.baits : defaultBaits
     const storedMontages: Montage[] = Array.isArray(parsed.montages)
@@ -155,6 +210,7 @@ const loadData = () => {
     sessions.value = parsed.sessions ?? []
     const loadedCatches = parsed.catches ?? []
     let migratedCatches = false
+    const storedSpecies = Object.prototype.hasOwnProperty.call(parsed, 'species')
 
     catches.value = loadedCatches.map((entry: CatchEntry & { waterId?: string }) => {
       if (entry.sessionId && sessions.value.some((session) => session.id === entry.sessionId)) return entry
@@ -186,11 +242,11 @@ const loadData = () => {
     })
 
     if (!sessionForm.value.waterId && waters.value[0]) sessionForm.value.waterId = waters.value[0].id
-    if (!catchForm.value.speciesId && species.value[0]) catchForm.value.speciesId = species.value[0].id
+    catchForm.value = createCatchForm()
     if (!catchForm.value.rodId && rods.value[0]) catchForm.value.rodId = rods.value[0].id
     if (!catchForm.value.baitId && baits.value[0]) catchForm.value.baitId = baits.value[0].id
     if (!catchForm.value.montageId && montages.value[0]) catchForm.value.montageId = montages.value[0].id
-    if (migratedCatches) saveData()
+    if (migratedCatches || storedSpecies) saveData()
   } catch {
     console.warn('Could not parse stored data, falling back to defaults.')
   }
@@ -199,7 +255,6 @@ const loadData = () => {
 const saveData = () => {
   const payload = {
     waters: waters.value,
-    species: species.value,
     rods: rods.value,
     baits: baits.value,
     montages: montages.value,
@@ -255,7 +310,7 @@ const deleteWater = (waterId: string) => {
   const water = waters.value.find((entry) => entry.id === waterId)
   if (!water) return
   if (sessions.value.some((session) => session.waterId === waterId)) {
-    waterMessage.value = 'Dieses Gewässer kann nicht gelöscht werden, da Angelereignisse darauf verweisen.'
+    waterMessage.value = 'Dieses Gewässer kann nicht gelöscht werden, da Touren darauf verweisen.'
     return
   }
   if (!window.confirm(`Gewässer „${water.name}“ wirklich löschen?`)) return
@@ -429,11 +484,209 @@ const addFishingSession = () => {
     temperature: Number(sessionForm.value.temperature),
     population: Number(sessionForm.value.population),
     precipitation: sessionForm.value.precipitation,
+    windSpeed10m: sessionForm.value.windSpeed10m,
+    windDirection10m: sessionForm.value.windDirection10m,
+    weatherCode: sessionForm.value.weatherCode,
     waterId: sessionForm.value.waterId
   }
   sessions.value.unshift(newSession)
+  cancelCatchEdit()
   selectedSessionId.value = newSession.id
+  isStartingTour.value = false
+  isCreatingTour.value = false
+  tourMessage.value = ''
   saveData()
+}
+
+const saveActiveTour = () => {
+  if (!sessionForm.value.waterId) return
+
+  const sessionIndex = sessions.value.findIndex((session) => session.id === editingSessionId.value)
+  if (sessionIndex < 0) return
+
+  sessions.value[sessionIndex] = {
+    ...sessions.value[sessionIndex]!,
+    from: sessionForm.value.from,
+    to: sessionForm.value.to,
+    temperature: Number(sessionForm.value.temperature),
+    population: Number(sessionForm.value.population),
+    precipitation: sessionForm.value.precipitation,
+    windSpeed10m: sessionForm.value.windSpeed10m,
+    windDirection10m: sessionForm.value.windDirection10m,
+    weatherCode: sessionForm.value.weatherCode,
+    waterId: sessionForm.value.waterId
+  }
+  editingSessionId.value = null
+  isStartingTour.value = false
+  tourMessage.value = ''
+  saveData()
+}
+
+const startTour = () => {
+  const now = getLocalDateTime()
+  const today = now.slice(0, 10)
+  const previousTourToday = [...sessions.value]
+    .filter((session) => session.to && session.from.slice(0, 10) === today)
+    .sort((first, second) => second.from.localeCompare(first.from))[0]
+
+  if (previousTourToday) {
+    const waterName = waters.value.find((water) => water.id === previousTourToday.waterId)?.name
+      ?? 'Unbekanntes Gewässer'
+    const startTime = new Date(previousTourToday.from).toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    if (window.confirm(`Tour ${waterName} von ${startTime} wieder öffnen?`)) {
+      previousTourToday.to = ''
+      selectedSessionId.value = previousTourToday.id
+      editingSessionId.value = null
+      isStartingTour.value = false
+      tourMessage.value = ''
+      homeMessage.value = ''
+      saveData()
+      return
+    }
+  }
+
+  sessionForm.value = {
+    ...sessionForm.value,
+    from: now,
+    to: '',
+    waterId: sessionForm.value.waterId || waters.value[0]?.id || ''
+  }
+  editingSessionId.value = null
+  tourMessage.value = ''
+  homeMessage.value = ''
+  isStartingTour.value = true
+}
+
+const editActiveTour = () => {
+  const session = activeSession.value
+  if (!session) return
+
+  editingSessionId.value = session.id
+  sessionForm.value = {
+    from: session.from,
+    to: session.to,
+    temperature: session.temperature,
+    population: session.population,
+    precipitation: session.precipitation,
+    windSpeed10m: session.windSpeed10m,
+    windDirection10m: session.windDirection10m,
+    weatherCode: session.weatherCode,
+    waterId: session.waterId
+  }
+  tourMessage.value = ''
+  isStartingTour.value = true
+}
+
+const cancelTourForm = () => {
+  editingSessionId.value = null
+  isStartingTour.value = false
+}
+
+const endTour = () => {
+  const session = activeSession.value
+  if (!session) return
+
+  session.to = getLocalDateTime()
+  saveData()
+}
+
+const discardActiveTour = () => {
+  const session = activeSession.value
+  if (!session) return
+  if (catches.value.some((entry) => entry.sessionId === session.id)) {
+    tourMessage.value = 'Tour hat bereits erfasste Fänge'
+    return
+  }
+  if (!window.confirm('Möchten Sie diese Tour wirklich verwerfen?')) return
+
+  sessions.value = sessions.value.filter((entry) => entry.id !== session.id)
+  if (selectedSessionId.value === session.id) selectedSessionId.value = ''
+  editingSessionId.value = null
+  isStartingTour.value = false
+  tourMessage.value = ''
+  saveData()
+}
+
+const openNewTourForm = () => {
+  const now = getLocalDateTime()
+  sessionForm.value = {
+    ...sessionForm.value,
+    from: now,
+    to: now,
+    waterId: sessionForm.value.waterId || waters.value[0]?.id || ''
+  }
+  tourMessage.value = ''
+  isCreatingTour.value = true
+}
+
+const deleteTour = (sessionId: string) => {
+  const session = sessions.value.find((entry) => entry.id === sessionId)
+  if (!session) return
+  if (catches.value.some((entry) => entry.sessionId === sessionId)) {
+    tourMessage.value = 'Tour hat bereits erfasste Fänge'
+    return
+  }
+
+  const waterName = waters.value.find((water) => water.id === session.waterId)?.name ?? 'Unbekanntes Gewässer'
+  if (!window.confirm(`Möchten Sie die Tour am ${formatCatchDate(session.from)} am Gewässer „${waterName}“ wirklich löschen?`)) return
+
+  sessions.value = sessions.value.filter((entry) => entry.id !== sessionId)
+  if (selectedSessionId.value === sessionId) {
+    selectedSessionId.value = ''
+    cancelCatchEdit()
+  }
+  if (expandedSessionId.value === sessionId) expandedSessionId.value = ''
+  tourMessage.value = ''
+  saveData()
+}
+
+const enterCatch = () => {
+  let session = activeSession.value
+  if (!session) {
+    const waterId = sessionForm.value.waterId || waters.value[0]?.id
+    if (!waterId) {
+      homeMessage.value = 'Lege zuerst ein Gewässer an, bevor du einen Fang erfassen kannst.'
+      return
+    }
+
+    session = {
+      id: createId(),
+      from: getLocalDateTime(),
+      to: '',
+      temperature: 0,
+      population: 0,
+      precipitation: 'Kein',
+      waterId
+    }
+    sessions.value.unshift(session)
+    saveData()
+  }
+
+  cancelCatchEdit()
+  selectedSessionId.value = session.id
+  isStartingTour.value = false
+  isEnteringCatch.value = true
+  homeMessage.value = ''
+}
+
+const addCatchToTour = (sessionId: string) => {
+  cancelCatchEdit()
+  selectedSessionId.value = sessionId
+  expandedSessionId.value = sessionId
+  catchForm.value.time = getLocalDateTime()
+  isEnteringCatch.value = true
+}
+
+const toggleTour = (sessionId: string) => {
+  if (expandedSessionId.value === sessionId) {
+    expandedSessionId.value = ''
+    if (selectedSessionId.value === sessionId) cancelCatchEdit()
+    return
+  }
+  expandedSessionId.value = sessionId
 }
 
 const saveCatch = () => {
@@ -473,13 +726,18 @@ const saveCatch = () => {
   }
 
   cancelCatchEdit()
+  isEnteringCatch.value = false
   saveData()
 }
 
 const editCatch = (catchId: string) => {
   const entry = catches.value.find((catchEntry) => catchEntry.id === catchId)
-  if (!entry || entry.sessionId !== selectedSessionId.value) return
+  if (!entry) return
 
+  if (selectedSessionId.value !== entry.sessionId) cancelCatchEdit()
+  selectedSessionId.value = entry.sessionId
+  expandedSessionId.value = entry.sessionId
+  isEnteringCatch.value = true
   editingCatchId.value = entry.id
   catchForm.value = {
     time: entry.time,
@@ -499,10 +757,12 @@ const editCatch = (catchId: string) => {
 }
 
 const deleteCatch = (catchId: string) => {
-  const index = catches.value.findIndex((entry) =>
-    entry.id === catchId && entry.sessionId === selectedSessionId.value
-  )
+  const index = catches.value.findIndex((entry) => entry.id === catchId)
   if (index < 0) return
+
+  const entry = catches.value[index]!
+  const fishName = species.find((fish) => fish.id === entry.speciesId)?.name ?? 'Unbekannter Fisch'
+  if (!window.confirm(`Möchten Sie wirklich den Fang: ${fishName} vom ${formatCatchDate(entry.time)} löschen?`)) return
 
   catches.value.splice(index, 1)
   if (editingCatchId.value === catchId) cancelCatchEdit()
@@ -512,9 +772,8 @@ const deleteCatch = (catchId: string) => {
 const cancelCatchEdit = () => {
   editingCatchId.value = null
   catchForm.value = createCatchForm()
+  isEnteringCatch.value = false
 }
-
-watch(selectedSessionId, cancelCatchEdit)
 
 const onBeforeInstallPrompt = (event: Event) => {
   event.preventDefault()
@@ -547,12 +806,32 @@ const openMasterData = (section: typeof activeMasterData.value) => {
 const selectedSession = computed(() =>
   sessions.value.find((session) => session.id === selectedSessionId.value) ?? null
 )
+const activeSession = computed(() => sessions.value.find((session) => !session.to) ?? null)
+const activeSessionWaterName = computed(() =>
+  waters.value.find((water) => water.id === activeSession.value?.waterId)?.name ?? 'Unbekanntes Gewässer'
+)
 const activeGearSection = computed<'rods' | 'baits' | 'montages'>(() =>
   activeMasterData.value === 'waters' ? 'rods' : activeMasterData.value
 )
 const catchesForSelectedSession = computed(() =>
   catches.value.filter((entry) => entry.sessionId === selectedSessionId.value)
 )
+const catchesForSession = (sessionId: string) =>
+  catches.value
+    .filter((entry) => entry.sessionId === sessionId)
+    .sort((first, second) => second.time.localeCompare(first.time))
+const sortedSessions = computed(() =>
+  [...sessions.value].sort((first, second) => second.from.localeCompare(first.from))
+)
+const latestCatches = computed(() =>
+  [...catches.value]
+    .sort((first, second) => second.time.localeCompare(first.time))
+    .slice(0, 10)
+)
+const formatCatchDate = (time: string) => {
+  const date = new Date(time)
+  return Number.isNaN(date.getTime()) ? time : date.toLocaleDateString('de-DE')
+}
 const totalCatches = computed(() => catches.value.length)
 const totalWeight = computed(() => catches.value.reduce((sum, entry) => sum + (entry.weightKg ?? 0), 0))
 const biggestCatch = computed(() => {
@@ -577,7 +856,20 @@ onUnmounted(() => {
     <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
       <div class="navbar-menu is-active">
         <div class="navbar-start">
-          <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'events'">Ereignisse</button>
+          <button
+            class="navbar-item button is-primary is-inverted is-light"
+            :class="{ 'is-selected': activeTab === 'home' }"
+            @click="activeTab = 'home'"
+          >
+            Start
+          </button>
+          <button
+            class="navbar-item button is-primary is-inverted is-light"
+            :class="{ 'is-selected': activeTab === 'events' }"
+            @click="activeTab = 'events'"
+          >
+            Touren
+          </button>
           <div class="masterdata-menu">
             <button
               class="navbar-item button is-primary is-inverted is-light"
@@ -612,29 +904,47 @@ onUnmounted(() => {
     </nav>
 
     <main class="page-content">
-      <section v-if="activeTab === 'events'" class="section">
+      <section v-if="activeTab === 'home'" class="section">
         <div class="container">
-          <h1 class="title is-4">Angelereignis</h1>
-          <FishingEventForm v-model="sessionForm" :waters="waters" @submit="addFishingSession" />
+          <h1 class="title is-4">Start</h1>
+
           <div class="box">
-            <h2 class="subtitle is-6">Fänge zu einem Angelereignis erfassen</h2>
-            <div v-if="sessions.length === 0" class="has-text-grey">
-              Speichere zuerst ein Angelereignis. Fänge können danach diesem Ereignis zugeordnet werden.
-            </div>
-            <div v-else>
-              <label class="label" for="session-select">Angelereignis auswählen</label>
-              <div class="select is-fullwidth">
-                <select id="session-select" v-model="selectedSessionId">
-                  <option value="" disabled>Angelereignis auswählen</option>
-                  <option v-for="session in sessions" :key="session.id" :value="session.id">
-                    {{ session.from }} · {{ waters.find((water) => water.id === session.waterId)?.name ?? 'Unbekanntes Gewässer' }}
-                  </option>
-                </select>
+            <template v-if="activeSession">
+              <p class="mb-3">
+                Aktive Tour seit {{ activeSession.from }} ·
+                {{ activeSessionWaterName }} ·
+                {{ catchesForSession(activeSession.id).length }} Fänge
+              </p>
+              <div class="buttons">
+                <button class="button is-warning" type="button" @click="endTour">Tour beenden</button>
+                <button class="button is-light" type="button" @click="editActiveTour">Tour bearbeiten</button>
+                <button class="button is-danger is-light" type="button" @click="discardActiveTour">Tour verwerfen</button>
               </div>
-            </div>
+            </template>
+            <template v-else-if="!isStartingTour">
+              <p class="mb-3">Es ist keine Tour aktiv.</p>
+              <button class="button is-primary" type="button" @click="startTour">Tour starten</button>
+            </template>
+            <p v-if="tourMessage" class="help is-danger mt-2" role="alert">{{ tourMessage }}</p>
           </div>
+          <FishingEventForm
+            v-if="isStartingTour"
+            v-model="sessionForm"
+            :waters="waters"
+            :heading="editingSessionId ? 'Tour bearbeiten' : 'Tour starten'"
+            :submit-label="editingSessionId ? 'Tour speichern' : 'Tour starten'"
+            :show-cancel="true"
+            @submit="editingSessionId ? saveActiveTour() : addFishingSession()"
+            @cancel="cancelTourForm"
+          />
+
+          <div class="box">
+            <button class="button is-link" type="button" @click="enterCatch">Fang erfassen</button>
+            <p v-if="homeMessage" class="help is-danger mt-2" role="alert">{{ homeMessage }}</p>
+          </div>
+
           <CatchView
-            v-if="selectedSession"
+            v-if="isEnteringCatch && selectedSession"
             v-model="catchForm"
             :waters="waters"
             :species="species"
@@ -644,11 +954,134 @@ onUnmounted(() => {
             :catches="catchesForSelectedSession"
             :session="selectedSession"
             :editing-catch-id="editingCatchId"
+            :show-catch-list="false"
+            :show-cancel="true"
             @submit="saveCatch"
             @edit="editCatch"
             @delete="deleteCatch"
             @cancel-edit="cancelCatchEdit"
           />
+
+          <div class="box">
+            <h2 class="subtitle is-6">Letzte 10 Fänge</h2>
+            <p v-if="latestCatches.length === 0" class="has-text-grey">Noch keine Fänge erfasst.</p>
+            <div v-else class="content">
+              <div v-for="entry in latestCatches" :key="entry.id" class="catch-row">
+                <span>
+                  {{ formatCatchDate(entry.time) }} ·
+                  {{ species.find((fish) => fish.id === entry.speciesId)?.name ?? 'Unbekannter Fisch' }} ·
+                  {{ entry.lengthCm }} cm
+                </span>
+                <div class="buttons are-small">
+                  <button class="button is-light" type="button" @click="editCatch(entry.id)">Bearbeiten</button>
+                  <button class="button is-danger is-light" type="button" @click="deleteCatch(entry.id)">Löschen</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section v-else-if="activeTab === 'events'" class="section">
+        <div class="container">
+          <h1 class="title is-4">Touren</h1>
+          <button
+            v-if="!isCreatingTour"
+            class="button is-primary mb-4"
+            type="button"
+            @click="openNewTourForm"
+          >
+            Neue Tour
+          </button>
+          <FishingEventForm
+            v-if="isCreatingTour"
+            v-model="sessionForm"
+            :waters="waters"
+            heading="Tour erfassen"
+            submit-label="Tour speichern"
+            :show-cancel="true"
+            @submit="addFishingSession"
+            @cancel="isCreatingTour = false"
+          />
+          <p v-if="tourMessage" class="help is-danger mb-3" role="alert">{{ tourMessage }}</p>
+          <h2 class="subtitle is-5">Alle Touren</h2>
+          <p v-if="sortedSessions.length === 0" class="has-text-grey">Noch keine Touren erfasst.</p>
+          <div v-else class="tour-list">
+            <article v-for="session in sortedSessions" :key="session.id" class="tour-item">
+              <div class="tour-heading">
+                <button
+                  class="tour-toggle"
+                  type="button"
+                  :aria-expanded="expandedSessionId === session.id"
+                  @click="toggleTour(session.id)"
+                >
+                  <span class="tour-heading-text">
+                    <strong>{{ waters.find((water) => water.id === session.waterId)?.name ?? 'Unbekanntes Gewässer' }}</strong>
+                    <span>{{ formatCatchDate(session.from) }}{{ session.to ? '' : ' · Aktiv' }}</span>
+                    <span>{{ catchesForSession(session.id).length }} Fänge</span>
+                  </span>
+                  <span class="tour-chevron" aria-hidden="true">{{ expandedSessionId === session.id ? '−' : '+' }}</span>
+                </button>
+                <button
+                  class="button is-primary is-light tour-add-catch"
+                  type="button"
+                  :aria-label="`Fang zu dieser Tour hinzufügen`"
+                  title="Fang hinzufügen"
+                  @click="addCatchToTour(session.id)"
+                >
+                  🐟
+                </button>
+                <button
+                  v-if="catchesForSession(session.id).length === 0"
+                  class="button is-danger is-light tour-delete"
+                  type="button"
+                  :aria-label="`Tour am ${formatCatchDate(session.from)} löschen`"
+                  title="Tour löschen"
+                  @click="deleteTour(session.id)"
+                >
+                  🗑
+                </button>
+              </div>
+
+              <div v-if="expandedSessionId === session.id" class="tour-details">
+                <p v-if="catchesForSession(session.id).length === 0" class="has-text-grey">
+                  Für diese Tour sind noch keine Fänge erfasst.
+                </p>
+                <div
+                  v-for="entry in catchesForSession(session.id)"
+                  :key="entry.id"
+                  class="catch-row"
+                >
+                  <span>
+                    {{ species.find((fish) => fish.id === entry.speciesId)?.name ?? 'Unbekannter Fisch' }} ·
+                    {{ entry.lengthCm }} cm ·
+                    {{ baits.find((bait) => bait.id === entry.baitId)?.name ?? 'Unbekannter Köder' }}
+                  </span>
+                  <div class="buttons are-small">
+                    <button class="button is-light" type="button" @click="editCatch(entry.id)">Bearbeiten</button>
+                    <button class="button is-danger is-light" type="button" @click="deleteCatch(entry.id)">Löschen</button>
+                  </div>
+                </div>
+                <CatchView
+                  v-if="isEnteringCatch && selectedSessionId === session.id && selectedSession"
+                  v-model="catchForm"
+                  :waters="waters"
+                  :species="species"
+                  :rods="rods"
+                  :baits="baits"
+                  :montages="montages"
+                  :catches="catchesForSelectedSession"
+                  :session="selectedSession"
+                  :editing-catch-id="editingCatchId"
+                  :show-catch-list="false"
+                  @submit="saveCatch"
+                  @edit="editCatch"
+                  @delete="deleteCatch"
+                  @cancel-edit="cancelCatchEdit"
+                />
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -759,5 +1192,90 @@ onUnmounted(() => {
 
 .content ul {
   margin-left: 1.25rem;
+}
+
+.catch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.tour-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tour-item {
+  overflow: hidden;
+  border: 1px solid #d5e0eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.tour-heading {
+  display: flex;
+  align-items: stretch;
+}
+
+.tour-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tour-heading-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1rem;
+}
+
+.tour-chevron {
+  flex: none;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.tour-add-catch {
+  align-self: center;
+  flex: none;
+  min-width: 2.5rem;
+  margin: 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.tour-delete {
+  align-self: center;
+  flex: none;
+  min-width: 2.5rem;
+  margin-right: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.tour-details {
+  padding: 0 1rem 1rem;
+}
+
+@media (max-width: 600px) {
+  .catch-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tour-heading-text {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
 }
 </style>

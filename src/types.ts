@@ -57,6 +57,9 @@ export type FishingSession = {
   temperature: number
   population: number
   precipitation: Precipitation
+  windSpeed10m?: number
+  windDirection10m?: number
+  weatherCode?: number
   waterId: string
 }
 

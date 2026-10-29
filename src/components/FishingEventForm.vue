@@ -2,9 +2,18 @@
 import { ref } from 'vue'
 import type { FishingSessionForm, Water } from '../types'
 
-const props = defineProps<{ waters: Water[] }>()
+const props = withDefaults(defineProps<{
+  waters: Water[]
+  heading?: string
+  submitLabel?: string
+  showCancel?: boolean
+}>(), {
+  heading: 'Tour erfassen',
+  submitLabel: 'Tour speichern',
+  showCancel: false
+})
 const form = defineModel<FishingSessionForm>({ required: true })
-defineEmits<{ submit: [] }>()
+defineEmits<{ submit: []; cancel: [] }>()
 
 const isFindingWater = ref(false)
 const locationMessage = ref('')
@@ -18,7 +27,10 @@ type WeatherResponse = {
     time?: string[]
     temperature_2m?: (number | null)[]
     cloud_cover?: (number | null)[]
-    precipitation?: (number | null)[]
+    wind_speed_10m?: (number | null)[]
+    wind_direction_10m?: (number | null)[]
+    weather_code?: (number | null)[]
+    rain?: (number | null)[]
   }
 }
 
@@ -156,7 +168,7 @@ const getWeatherFromLocation = async () => {
   const selectedDate = selectedTime.slice(0, 10)
   const selectedHour = `${selectedTime.slice(0, 13)}:00`
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(selectedTime)) {
-    weatherError.value = 'Bitte gib zuerst einen gültigen Beginn des Angeltermins ein.'
+    weatherError.value = 'Bitte gib zuerst einen gültigen Beginn der Tour ein.'
     return
   }
 
@@ -169,20 +181,26 @@ const getWeatherFromLocation = async () => {
     const coordinateSource = hasWaterCoordinates
       ? `Gewässer „${water.name}“`
       : 'aktuelle Position (Gewässer ohne GPS-Koordinaten)'
-    const today = new Date().toLocaleDateString('sv-SE')
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date())
     const endpoint = selectedDate < today
       ? 'https://archive-api.open-meteo.com/v1/archive'
       : 'https://api.open-meteo.com/v1/forecast'
+    const forecastDays = Math.min(
+      16,
+      Math.max(1, Math.floor((Date.parse(`${selectedDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000) + 1)
+    )
     const url = new URL(endpoint)
-    url.search = new URLSearchParams({
+    const parameters = new URLSearchParams({
       latitude: String(coordinates.latitude),
       longitude: String(coordinates.longitude),
-      hourly: 'temperature_2m,cloud_cover,precipitation',
-      start_date: selectedDate,
-      end_date: selectedDate,
-      timezone: 'auto',
-      ...(selectedDate >= today ? { past_days: '1', forecast_days: '16' } : {})
-    }).toString()
+      daily: 'sunrise,sunset',
+      hourly: 'temperature_2m,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,rain',
+      timezone: 'Europe/Berlin',
+      ...(selectedDate < today
+        ? { start_date: selectedDate, end_date: selectedDate }
+        : { past_days: '1', forecast_days: String(forecastDays) })
+    })
+    url.search = parameters.toString()
 
     const response = await fetch(url)
     if (!response.ok) {
@@ -194,14 +212,23 @@ const getWeatherFromLocation = async () => {
     const hourIndex = hourly?.time?.indexOf(selectedHour) ?? -1
     const temperature = hourly?.temperature_2m?.[hourIndex]
     const cloudCover = hourly?.cloud_cover?.[hourIndex]
-    const precipitation = hourly?.precipitation?.[hourIndex]
+    const windSpeed = hourly?.wind_speed_10m?.[hourIndex]
+    const windDirection = hourly?.wind_direction_10m?.[hourIndex]
+    const weatherCode = hourly?.weather_code?.[hourIndex]
+    const precipitation = hourly?.rain?.[hourIndex]
     if (
       hourIndex < 0
       || temperature == null
       || cloudCover == null
+      || windSpeed == null
+      || windDirection == null
+      || weatherCode == null
       || precipitation == null
       || !Number.isFinite(temperature)
       || !Number.isFinite(cloudCover)
+      || !Number.isFinite(windSpeed)
+      || !Number.isFinite(windDirection)
+      || !Number.isFinite(weatherCode)
       || !Number.isFinite(precipitation)
     ) {
       throw new Error('Für diesen Zeitpunkt sind keine vollständigen Wetterdaten verfügbar.')
@@ -209,8 +236,11 @@ const getWeatherFromLocation = async () => {
 
     form.value.temperature = temperature
     form.value.population = cloudCover
+    form.value.windSpeed10m = windSpeed
+    form.value.windDirection10m = windDirection
+    form.value.weatherCode = weatherCode
     form.value.precipitation = getPrecipitationLevel(precipitation)
-    weatherMessage.value = `Wetterdaten für ${selectedHour} Uhr von ${coordinateSource} übernommen. Niederschlag: ${precipitation} mm/Stunde.`
+    weatherMessage.value = `Wetterdaten für ${selectedHour} Uhr von ${coordinateSource} übernommen. Wind: ${windSpeed} km/h aus ${windDirection}°, Wettercode: ${weatherCode}, Niederschlag: ${precipitation} mm/Stunde.`
   } catch (error) {
     weatherError.value = error instanceof Error
       ? error.message
@@ -223,7 +253,7 @@ const getWeatherFromLocation = async () => {
 
 <template>
   <div class="box">
-    <h2 class="subtitle is-6">Angeltermin erfassen</h2>
+    <h2 class="subtitle is-6">{{ props.heading }}</h2>
     <div class="columns is-multiline">
       <div class="column is-half">
         <label class="label">Von</label>
@@ -251,6 +281,18 @@ const getWeatherFromLocation = async () => {
             <option>Stark</option>
           </select>
         </div>
+      </div>
+      <div class="column is-one-third">
+        <label class="label">Windstärke km/h</label>
+        <input v-model.number="form.windSpeed10m" type="number" min="0" step="any" class="input" />
+      </div>
+      <div class="column is-one-third">
+        <label class="label">Windrichtung °</label>
+        <input v-model.number="form.windDirection10m" type="number" min="0" max="360" step="any" class="input" />
+      </div>
+      <div class="column is-one-third">
+        <label class="label">Wettercode</label>
+        <input v-model.number="form.weatherCode" type="number" min="0" step="1" class="input" />
       </div>
       <div class="column is-full">
         <label class="label">Gewässer</label>
@@ -283,7 +325,7 @@ const getWeatherFromLocation = async () => {
         <p v-if="locationMessage" class="help" role="status">{{ locationMessage }}</p>
         <p v-if="locationError" class="help is-danger" role="alert">{{ locationError }}</p>
         <p class="help">
-          Wetter für den Beginn des Angeltermins. Niederschlag pro Stunde: leicht unter 2,5 mm,
+          Wetter für den Beginn der Tour. Niederschlag pro Stunde: leicht unter 2,5 mm,
           mittel unter 10 mm, stark ab 10 mm.
         </p>
         <p v-if="weatherMessage" class="help" role="status">{{ weatherMessage }}</p>
@@ -295,6 +337,9 @@ const getWeatherFromLocation = async () => {
         </p>
       </div>
     </div>
-    <button class="button is-primary mt-3" @click="$emit('submit')">Angeltermin speichern</button>
+    <div class="buttons mt-3">
+      <button class="button is-primary" type="button" @click="$emit('submit')">{{ props.submitLabel }}</button>
+      <button v-if="props.showCancel" class="button" type="button" @click="$emit('cancel')">Abbrechen</button>
+    </div>
   </div>
 </template>

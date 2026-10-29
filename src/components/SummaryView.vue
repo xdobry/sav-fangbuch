@@ -41,20 +41,23 @@ defineProps<{
       </div>
 
       <div class="box">
-        <h2 class="subtitle is-6">Angelereignisse und Fischfänge</h2>
-        <div v-if="sessions.length === 0" class="has-text-grey">Noch keine Angeltermine.</div>
+        <h2 class="subtitle is-6">Touren und Fischfänge</h2>
+        <div v-if="sessions.length === 0" class="has-text-grey">Noch keine Touren.</div>
         <div v-else>
           <article v-for="session in sessions" :key="session.id" class="mb-5">
             <h3 class="title is-6">
-              {{ session.from }} bis {{ session.to }} ·
+              {{ session.from }}{{ session.to ? ` bis ${session.to}` : ' · aktiv' }} ·
               {{ waters.find((water) => water.id === session.waterId)?.name ?? 'Unbekanntes Gewässer' }}
             </h3>
             <p class="mb-2">
               {{ session.temperature }}°C · {{ session.population }}% Bewölkung · {{ session.precipitation }}
+              <span v-if="session.windSpeed10m !== undefined"> · Wind {{ session.windSpeed10m }} km/h</span>
+              <span v-if="session.windDirection10m !== undefined"> · Richtung {{ session.windDirection10m }}°</span>
+              <span v-if="session.weatherCode !== undefined"> · Wettercode {{ session.weatherCode }}</span>
             </p>
             <h4 class="has-text-weight-semibold">Fischfänge</h4>
             <p v-if="!catches.some((entry) => entry.sessionId === session.id)" class="has-text-grey">
-              Keine Fischfänge zu diesem Angelereignis.
+              Keine Fischfänge zu dieser Tour.
             </p>
             <ul v-else>
               <li v-for="entry in catches.filter((catchEntry) => catchEntry.sessionId === session.id)" :key="entry.id">
