@@ -1,22 +1,95 @@
 <script setup lang="ts">
-import type { Bait, CatchEntry, CatchForm, FishSpecies, FishingSession, Rod, Water } from '../types'
+import { computed, ref } from 'vue'
+import type { Bait, CatchEntry, CatchForm, FishSpecies, FishingSession, Montage, Rod, Water } from '../types'
 
 defineProps<{
   waters: Water[]
   species: FishSpecies[]
   rods: Rod[]
   baits: Bait[]
+  montages: Montage[]
   catches: CatchEntry[]
   session: FishingSession
   editingCatchId: string | null
 }>()
 const form = defineModel<CatchForm>({ required: true })
-defineEmits<{
+const isGettingPosition = ref(false)
+const positionMessage = ref('')
+const positionError = ref('')
+const emit = defineEmits<{
   submit: []
   edit: [catchId: string]
   delete: [catchId: string]
   cancelEdit: []
 }>()
+
+const coordinateError = computed(() => {
+  const { latitude, longitude } = form.value
+  if ((latitude === undefined) !== (longitude === undefined)) {
+    return 'Bitte Breiten- und Längengrad gemeinsam eingeben.'
+  }
+  if (latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+    return 'Der Breitengrad muss zwischen -90 und 90 liegen.'
+  }
+  if (longitude !== undefined && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) {
+    return 'Der Längengrad muss zwischen -180 und 180 liegen.'
+  }
+  return ''
+})
+const openStreetMapUrl = computed(() => {
+  const { latitude, longitude } = form.value
+  if (latitude === undefined || longitude === undefined || coordinateError.value) return ''
+  return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`
+})
+
+const setCoordinate = (coordinate: 'latitude' | 'longitude', event: Event) => {
+  const input = event.target as HTMLInputElement
+  form.value[coordinate] = input.value === '' ? undefined : input.valueAsNumber
+  positionMessage.value = ''
+  positionError.value = ''
+}
+
+const getCurrentPosition = () => {
+  positionMessage.value = ''
+  positionError.value = ''
+
+  if (!window.isSecureContext) {
+    positionError.value = 'Die Standortbestimmung ist nur über HTTPS oder localhost verfügbar.'
+    return
+  }
+  if (!navigator.geolocation) {
+    positionError.value = 'Dieser Browser unterstützt keine Standortbestimmung.'
+    return
+  }
+
+  isGettingPosition.value = true
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      form.value.latitude = position.coords.latitude
+      form.value.longitude = position.coords.longitude
+      isGettingPosition.value = false
+      positionMessage.value = 'Aktuelle Position übernommen.'
+    },
+    (error) => {
+      isGettingPosition.value = false
+      if (error.code === error.PERMISSION_DENIED) {
+        positionError.value = 'Der Zugriff auf den Standort wurde verweigert. Bitte erteile dem Browser die Berechtigung.'
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        positionError.value = 'Die aktuelle Position ist nicht verfügbar.'
+      } else if (error.code === error.TIMEOUT) {
+        positionError.value = 'Die Standortbestimmung hat zu lange gedauert. Bitte versuche es erneut.'
+      } else {
+        positionError.value = 'Die Standortbestimmung ist fehlgeschlagen.'
+      }
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  )
+}
+
+const submitCatch = () => {
+  if (coordinateError.value) return
+  emit('submit')
+}
 </script>
 
 <template>
@@ -64,6 +137,77 @@ defineEmits<{
           </select>
         </div>
       </div>
+      <div class="column is-one-third">
+        <label class="label">Montage</label>
+        <div class="select is-fullwidth">
+          <select v-model="form.montageId">
+            <option v-for="montage in montages" :key="montage.id" :value="montage.id">
+              {{ montage.title }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="column is-one-third">
+        <label class="label">Montagegewicht</label>
+        <input v-model.number="form.montageWeight" type="number" min="0" step="any" class="input" />
+      </div>
+      <div class="column is-full">
+        <label class="checkbox">
+          <input v-model="form.retained" type="checkbox" />
+          Fisch wurde entnommen
+        </label>
+      </div>
+      <div class="column is-full">
+        <label class="label">GPS-Position</label>
+        <div class="columns is-mobile">
+          <div class="column">
+            <label class="label" for="catch-latitude">Breitengrad</label>
+            <input
+              id="catch-latitude"
+              :value="form.latitude ?? ''"
+              type="number"
+              min="-90"
+              max="90"
+              step="any"
+              class="input"
+              placeholder="z. B. 51.045"
+              @input="setCoordinate('latitude', $event)"
+            />
+          </div>
+          <div class="column">
+            <label class="label" for="catch-longitude">Längengrad</label>
+            <input
+              id="catch-longitude"
+              :value="form.longitude ?? ''"
+              type="number"
+              min="-180"
+              max="180"
+              step="any"
+              class="input"
+              placeholder="z. B. 7.020"
+              @input="setCoordinate('longitude', $event)"
+            />
+          </div>
+        </div>
+        <div class="buttons">
+          <button class="button is-light" type="button" :disabled="isGettingPosition" @click="getCurrentPosition">
+            <span aria-hidden="true">◎</span>&nbsp;
+            {{ isGettingPosition ? 'Position wird ermittelt …' : 'Aktuelle Position' }}
+          </button>
+          <a
+            v-if="openStreetMapUrl"
+            class="button is-light"
+            :href="openStreetMapUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OpenStreetMap öffnen
+          </a>
+        </div>
+        <p v-if="positionMessage" class="help is-success" role="status">{{ positionMessage }}</p>
+        <p v-if="positionError" class="help is-danger" role="alert">{{ positionError }}</p>
+        <p v-if="coordinateError" class="help is-danger" role="alert">{{ coordinateError }}</p>
+      </div>
       <div class="column is-full">
         <label class="label">Foto</label>
         <input v-model="form.photo" type="text" class="input" placeholder="optional URL oder datei" />
@@ -74,7 +218,7 @@ defineEmits<{
       </div>
     </div>
     <div class="buttons mt-3">
-      <button class="button is-link" @click="$emit('submit')">
+      <button class="button is-link" @click="submitCatch">
         {{ editingCatchId ? 'Änderungen speichern' : 'Fang speichern' }}
       </button>
       <button v-if="editingCatchId" class="button" @click="$emit('cancelEdit')">Abbrechen</button>
@@ -90,6 +234,10 @@ defineEmits<{
           {{ species.find((fish) => fish.id === entry.speciesId)?.name }} ·
           {{ entry.time }} · {{ entry.lengthCm }} cm
           <span v-if="entry.weightKg">· {{ entry.weightKg }} kg</span>
+          · {{ entry.retained ? 'Entnommen' : 'Nicht entnommen' }}
+          <span v-if="entry.latitude !== undefined && entry.longitude !== undefined">
+            · {{ entry.latitude.toFixed(6) }}, {{ entry.longitude.toFixed(6) }}
+          </span>
         </span>
         <div class="buttons are-small">
           <button class="button is-light" @click="$emit('edit', entry.id)">Bearbeiten</button>

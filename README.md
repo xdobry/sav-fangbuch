@@ -24,6 +24,12 @@ npm install
 npm run dev
 ```
 
+In lokalen netzwerk verfügbar
+
+```sh
+npm run dev -- --host 0.0.0.0
+```
+
 Vite zeigt nach dem Start die lokale Adresse der Entwicklungsanwendung an.
 
 ## Build und Vorschau

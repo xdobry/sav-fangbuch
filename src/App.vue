@@ -14,6 +14,8 @@ import type {
   FishSpecies,
   FishingSession,
   FishingSessionForm,
+  Montage,
+  MontageForm,
   Rod,
   RodForm,
   Water,
@@ -35,14 +37,15 @@ const defaultSpecies: FishSpecies[] = [
 ]
 
 const defaultWaters: Water[] = [
-  { id: 'autobahnweiher', name: 'Autobahnweiher', location: '' },
-  { id: 'grosse-ledder', name: 'Große Ledder', location: '' },
-  { id: 'grosser-silbersee', name: 'Großer Silbersee', location: '' },
-  { id: 'hitdorfersee-nord', name: 'Hitdorfersee Nord', location: '' },
-  { id: 'kleiner-dehlensee', name: 'Kleiner Dehlensee', location: '' },
-  { id: 'rheinhafen-hitdorf', name: 'Rheinhafen Hitdorf', location: '' },
-  { id: 'stoeckenbergsee', name: 'Stöckenbergsee', location: '' },
-  { id: 'wupper', name: 'Wupper', location: '' }
+  { id: 'autobahnweiher', name: 'Autobahnweiher', location: 'Leverkusen', 
+      latitude: 51.017875417026495, longitude: 7.01031190443649250  },
+  { id: 'grosse-ledder', name: 'Große Ledder', location: 'Leverkusen', latitude: 51.099071375174255, longitude: 7.232025280344614 },
+  { id: 'grosser-silbersee', name: 'Großer Silbersee', location: 'Leverkusen', latitude: 51.07135766552641, longitude: 6.9336335602489845 },
+  { id: 'hitdorfersee-nord', name: 'Hitdorfersee Nord', location: 'Leverkusen', latitude: 51.07232842931969, longitude: 6.931144470033943 },
+  { id: 'kleiner-dehlensee', name: 'Kleiner Dehlensee', location: 'Leverkusen', latitude: 51.06079991045928, longitude:  6.9406035532901384 },
+  { id: 'rheinhafen-hitdorf', name: 'Rheinhafen Hitdorf', location: 'Leverkusen', latitude: 51.06024636334001, longitude: 6.913463348581607 },
+  { id: 'stoeckenbergsee', name: 'Stöckenbergsee', location: 'Leverkusen', latitude: 51.04701564905807, longitude: 7.0097765516169375 },
+  { id: 'wupper', name: 'Wupper', location: 'Leverkusen', latitude: 51.03663340599309, longitude: 7.001051754417278 }
 ]
 
 const defaultRods: Rod[] = [
@@ -52,12 +55,30 @@ const defaultRods: Rod[] = [
 ]
 
 const defaultBaits: Bait[] = [
-  { id: 'bait-1', category: 'Köder', name: 'Spinner', kind: 'Kunstköder' },
-  { id: 'bait-2', category: 'Köder', name: 'Wobbler', kind: 'Kunstköder' },
-  { id: 'bait-3', category: 'Köder', name: 'Gumifisch', kind: 'Kunstköder' },
-  { id: 'bait-4', category: 'Köder', name: 'Made', kind: 'Lebend' },
-  { id: 'bait-5', category: 'Vorfach', name: 'Vorfach', kind: 'Lebend' },
-  { id: 'bait-6', category: 'Haken', name: 'Haken 3/0', kind: 'Lebend' }
+  { id: 'bait-1', name: 'Spinner', kind: 'Kunstköder' },
+  { id: 'bait-2', name: 'Wobbler', kind: 'Kunstköder' },
+  { id: 'bait-3', name: 'Gumifisch', kind: 'Kunstköder' },
+  { id: 'bait-6', name: 'Blinker', kind: 'Kunstköder' },
+  { id: 'bait-7', name: 'Chaterbait', kind: 'Kunstköder' },
+  { id: 'bait-8', name: 'Popper', kind: 'Kunstköder' },
+  { id: 'bait-9', name: 'Krebs', kind: 'Kunstköder' },
+  { id: 'bait-10', name: 'SpinMad', kind: 'Kunstköder' },
+  { id: 'bait-4', name: 'Made', kind: 'Lebend' },
+  { id: 'bait-5', name: 'Wurm', kind: 'Lebend' },
+  { id: 'bait-11', name: 'Popup', kind: 'Organisch' },
+  { id: 'bait-12', name: 'Teig', kind: 'Organisch' },
+  { id: 'bait-13', name: 'Boily', kind: 'Organisch' },
+]
+
+const defaultMontages: Montage[] = [
+  { id: 'montage-laufpose', title: 'Laufpose' },
+  { id: 'montage-feststellpose', title: 'Feststellpose' },
+  { id: 'montage-feeder', title: 'Feeder' },
+  { id: 'montage-einfaches-grundblei', title: 'Einfaches Grundblei' },
+  { id: 'montage-jig', title: 'Jig' },
+  { id: 'montage-flourocarbon', title: 'Flourocarbon' },
+  { id: 'montage-stahlvorfach', title: 'Stahlvorfach' },
+  { id: 'montage-dropshot', title: 'Dropshot' }
 ]
 
 const storageKey = 'fangbuch-data-v1'
@@ -65,14 +86,29 @@ const waters = ref<Water[]>(defaultWaters)
 const species = ref<FishSpecies[]>(defaultSpecies)
 const rods = ref<Rod[]>(defaultRods)
 const baits = ref<Bait[]>(defaultBaits)
+const montages = ref<Montage[]>(defaultMontages)
 const sessions = ref<FishingSession[]>([])
 const catches = ref<CatchEntry[]>([])
 
-const activeTab = ref<'events' | 'waters' | 'gear' | 'summary'>('events')
+const activeTab = ref<'events' | 'masterdata' | 'summary'>('events')
+const activeMasterData = ref<'waters' | 'rods' | 'baits' | 'montages'>('waters')
+const masterDataItems = [
+  { id: 'waters', label: 'Gewässer' },
+  { id: 'rods', label: 'Ruten' },
+  { id: 'baits', label: 'Köder' },
+  { id: 'montages', label: 'Montagen' }
+] as const
 const selectedSessionId = ref('')
 const editingCatchId = ref<string | null>(null)
+const editingWaterId = ref<string | null>(null)
+const editingRodId = ref<string | null>(null)
+const editingBaitId = ref<string | null>(null)
+const editingMontageId = ref<string | null>(null)
 const waterForm = ref<WaterForm>({ name: '', location: '' })
-const baitForm = ref<BaitForm>({ name: '', kind: 'Kunstköder', category: 'Köder' })
+const waterMessage = ref('')
+const gearMessage = ref('')
+const baitForm = ref<BaitForm>({ name: '', kind: 'Kunstköder' })
+const montageForm = ref<MontageForm>({ title: '' })
 const rodForm = ref<RodForm>({ type: 'Teleskop', length: 3.6 })
 const sessionForm = ref<FishingSessionForm>({
   from: new Date().toISOString().slice(0, 16),
@@ -89,6 +125,9 @@ const createCatchForm = (): CatchForm => ({
   weightKg: 1.2,
   rodId: rods.value[0]?.id ?? '',
   baitId: baits.value[0]?.id ?? '',
+  montageId: montages.value[0]?.id ?? '',
+  montageWeight: 0,
+  retained: false,
   photo: '',
   notes: ''
 })
@@ -105,6 +144,14 @@ const loadData = () => {
     species.value = parsed.species?.length ? parsed.species : defaultSpecies
     rods.value = parsed.rods?.length ? parsed.rods : defaultRods
     baits.value = parsed.baits?.length ? parsed.baits : defaultBaits
+    const storedMontages: Montage[] = Array.isArray(parsed.montages)
+      ? parsed.montages.map(({ id, title }: Montage) => ({ id, title }))
+      : []
+    const storedMontageIds = new Set(storedMontages.map((montage) => montage.id))
+    montages.value = [
+      ...storedMontages,
+      ...defaultMontages.filter((montage) => !storedMontageIds.has(montage.id))
+    ]
     sessions.value = parsed.sessions ?? []
     const loadedCatches = parsed.catches ?? []
     let migratedCatches = false
@@ -142,6 +189,7 @@ const loadData = () => {
     if (!catchForm.value.speciesId && species.value[0]) catchForm.value.speciesId = species.value[0].id
     if (!catchForm.value.rodId && rods.value[0]) catchForm.value.rodId = rods.value[0].id
     if (!catchForm.value.baitId && baits.value[0]) catchForm.value.baitId = baits.value[0].id
+    if (!catchForm.value.montageId && montages.value[0]) catchForm.value.montageId = montages.value[0].id
     if (migratedCatches) saveData()
   } catch {
     console.warn('Could not parse stored data, falling back to defaults.')
@@ -154,48 +202,220 @@ const saveData = () => {
     species: species.value,
     rods: rods.value,
     baits: baits.value,
+    montages: montages.value,
     sessions: sessions.value,
     catches: catches.value
   }
   localStorage.setItem(storageKey, JSON.stringify(payload))
 }
 
-const addWater = () => {
-  if (!waterForm.value.name.trim() || !waterForm.value.location.trim()) return
+const saveWater = () => {
+  if (!waterForm.value.name.trim()) return
 
-  waters.value.unshift({
-    id: createId(),
+  const waterData = {
     name: waterForm.value.name.trim(),
-    location: waterForm.value.location.trim()
-  })
+    location: waterForm.value.location.trim(),
+    latitude: waterForm.value.latitude,
+    longitude: waterForm.value.longitude
+  }
+  if (editingWaterId.value) {
+    const index = waters.value.findIndex((water) => water.id === editingWaterId.value)
+    if (index < 0) return
+    waters.value[index] = { ...waters.value[index]!, ...waterData }
+  } else {
+    waters.value.unshift({ id: createId(), ...waterData })
+  }
+  editingWaterId.value = null
   waterForm.value = { name: '', location: '' }
+  waterMessage.value = ''
   saveData()
 }
 
-const addBait = () => {
+const editWater = (waterId: string) => {
+  const water = waters.value.find((entry) => entry.id === waterId)
+  if (!water) return
+
+  editingWaterId.value = water.id
+  waterForm.value = {
+    name: water.name,
+    location: water.location,
+    latitude: water.latitude,
+    longitude: water.longitude
+  }
+  waterMessage.value = ''
+}
+
+const cancelWaterEdit = () => {
+  editingWaterId.value = null
+  waterForm.value = { name: '', location: '' }
+  waterMessage.value = ''
+}
+
+const deleteWater = (waterId: string) => {
+  const water = waters.value.find((entry) => entry.id === waterId)
+  if (!water) return
+  if (sessions.value.some((session) => session.waterId === waterId)) {
+    waterMessage.value = 'Dieses Gewässer kann nicht gelöscht werden, da Angelereignisse darauf verweisen.'
+    return
+  }
+  if (!window.confirm(`Gewässer „${water.name}“ wirklich löschen?`)) return
+
+  waters.value = waters.value.filter((entry) => entry.id !== waterId)
+  if (editingWaterId.value === waterId) cancelWaterEdit()
+  if (sessionForm.value.waterId === waterId) sessionForm.value.waterId = waters.value[0]?.id ?? ''
+  waterMessage.value = ''
+  saveData()
+}
+
+const saveBait = () => {
   if (!baitForm.value.name.trim()) return
 
-  baits.value.unshift({
-    id: createId(),
-    category: baitForm.value.category,
+  const baitData = {
     name: baitForm.value.name.trim(),
     kind: baitForm.value.kind
-  })
-  baitForm.value = { name: '', kind: 'Kunstköder', category: 'Köder' }
-  catchForm.value.baitId = baits.value[0]?.id ?? ''
+  }
+  if (editingBaitId.value) {
+    const index = baits.value.findIndex((bait) => bait.id === editingBaitId.value)
+    if (index < 0) return
+    baits.value[index] = { ...baits.value[index]!, ...baitData }
+  } else {
+    baits.value.unshift({ id: createId(), ...baitData })
+    catchForm.value.baitId = baits.value[0]?.id ?? ''
+  }
+  editingBaitId.value = null
+  baitForm.value = { name: '', kind: 'Kunstköder' }
+  gearMessage.value = ''
   saveData()
 }
 
-const addRod = () => {
+const editBait = (baitId: string) => {
+  const bait = baits.value.find((entry) => entry.id === baitId)
+  if (!bait) return
+  editingBaitId.value = bait.id
+  baitForm.value = { name: bait.name, kind: bait.kind }
+  gearMessage.value = ''
+}
+
+const cancelBaitEdit = () => {
+  editingBaitId.value = null
+  baitForm.value = { name: '', kind: 'Kunstköder' }
+  gearMessage.value = ''
+}
+
+const deleteBait = (baitId: string) => {
+  const bait = baits.value.find((entry) => entry.id === baitId)
+  if (!bait) return
+  if (catches.value.some((entry) => entry.baitId === baitId)) {
+    gearMessage.value = 'Dieser Köder kann nicht gelöscht werden, da Fänge darauf verweisen.'
+    return
+  }
+  if (!window.confirm(`Köder „${bait.name}“ wirklich löschen?`)) return
+
+  baits.value = baits.value.filter((entry) => entry.id !== baitId)
+  if (editingBaitId.value === baitId) cancelBaitEdit()
+  if (catchForm.value.baitId === baitId) catchForm.value.baitId = baits.value[0]?.id ?? ''
+  gearMessage.value = ''
+  saveData()
+}
+
+const saveMontage = () => {
+  if (!montageForm.value.title.trim()) return
+
+  const montageData = {
+    title: montageForm.value.title.trim()
+  }
+  if (editingMontageId.value) {
+    const index = montages.value.findIndex((montage) => montage.id === editingMontageId.value)
+    if (index < 0) return
+    montages.value[index] = { ...montages.value[index]!, ...montageData }
+  } else {
+    montages.value.unshift({ id: createId(), ...montageData })
+    catchForm.value.montageId = montages.value[0]?.id ?? ''
+  }
+  editingMontageId.value = null
+  montageForm.value = { title: '' }
+  gearMessage.value = ''
+  saveData()
+}
+
+const editMontage = (montageId: string) => {
+  const montage = montages.value.find((entry) => entry.id === montageId)
+  if (!montage) return
+  editingMontageId.value = montage.id
+  montageForm.value = { title: montage.title }
+  gearMessage.value = ''
+}
+
+const cancelMontageEdit = () => {
+  editingMontageId.value = null
+  montageForm.value = { title: '' }
+  gearMessage.value = ''
+}
+
+const deleteMontage = (montageId: string) => {
+  const montage = montages.value.find((entry) => entry.id === montageId)
+  if (!montage) return
+  if (catches.value.some((entry) => entry.montageId === montageId)) {
+    gearMessage.value = 'Diese Montage kann nicht gelöscht werden, da Fänge darauf verweisen.'
+    return
+  }
+  if (!window.confirm(`Montage „${montage.title}“ wirklich löschen?`)) return
+
+  montages.value = montages.value.filter((entry) => entry.id !== montageId)
+  if (editingMontageId.value === montageId) cancelMontageEdit()
+  if (catchForm.value.montageId === montageId) catchForm.value.montageId = montages.value[0]?.id ?? ''
+  gearMessage.value = ''
+  saveData()
+}
+
+const saveRod = () => {
   if (!rodForm.value.type) return
 
-  rods.value.unshift({
-    id: createId(),
+  const rodData = {
     type: rodForm.value.type,
     length: Number(rodForm.value.length) || 3.6
-  })
+  }
+  if (editingRodId.value) {
+    const index = rods.value.findIndex((rod) => rod.id === editingRodId.value)
+    if (index < 0) return
+    rods.value[index] = { ...rods.value[index]!, ...rodData }
+  } else {
+    rods.value.unshift({ id: createId(), ...rodData })
+    catchForm.value.rodId = rods.value[0]?.id ?? ''
+  }
+  editingRodId.value = null
   rodForm.value = { type: 'Teleskop', length: 3.6 }
-  catchForm.value.rodId = rods.value[0]?.id ?? ''
+  gearMessage.value = ''
+  saveData()
+}
+
+const editRod = (rodId: string) => {
+  const rod = rods.value.find((entry) => entry.id === rodId)
+  if (!rod) return
+  editingRodId.value = rod.id
+  rodForm.value = { type: rod.type, length: rod.length }
+  gearMessage.value = ''
+}
+
+const cancelRodEdit = () => {
+  editingRodId.value = null
+  rodForm.value = { type: 'Teleskop', length: 3.6 }
+  gearMessage.value = ''
+}
+
+const deleteRod = (rodId: string) => {
+  const rod = rods.value.find((entry) => entry.id === rodId)
+  if (!rod) return
+  if (catches.value.some((entry) => entry.rodId === rodId)) {
+    gearMessage.value = 'Diese Rute kann nicht gelöscht werden, da Fänge darauf verweisen.'
+    return
+  }
+  if (!window.confirm(`Rute „${rod.type} · ${rod.length} m“ wirklich löschen?`)) return
+
+  rods.value = rods.value.filter((entry) => entry.id !== rodId)
+  if (editingRodId.value === rodId) cancelRodEdit()
+  if (catchForm.value.rodId === rodId) catchForm.value.rodId = rods.value[0]?.id ?? ''
+  gearMessage.value = ''
   saveData()
 }
 
@@ -217,7 +437,7 @@ const addFishingSession = () => {
 }
 
 const saveCatch = () => {
-  if (!selectedSessionId.value || !catchForm.value.speciesId || !catchForm.value.rodId || !catchForm.value.baitId) return
+  if (!selectedSessionId.value || !catchForm.value.speciesId || !catchForm.value.rodId || !catchForm.value.baitId || !catchForm.value.montageId) return
 
   const catchData = {
     time: catchForm.value.time,
@@ -226,6 +446,13 @@ const saveCatch = () => {
     weightKg: catchForm.value.weightKg ? Number(catchForm.value.weightKg) : undefined,
     rodId: catchForm.value.rodId,
     baitId: catchForm.value.baitId,
+    montageId: catchForm.value.montageId,
+    montageWeight: catchForm.value.montageWeight === undefined
+      ? undefined
+      : Number(catchForm.value.montageWeight),
+    retained: Boolean(catchForm.value.retained),
+    latitude: catchForm.value.latitude,
+    longitude: catchForm.value.longitude,
     photo: catchForm.value.photo,
     notes: catchForm.value.notes
   }
@@ -261,6 +488,11 @@ const editCatch = (catchId: string) => {
     weightKg: entry.weightKg,
     rodId: entry.rodId,
     baitId: entry.baitId,
+    montageId: entry.montageId ?? montages.value[0]?.id ?? '',
+    montageWeight: entry.montageWeight ?? 0,
+    retained: entry.retained ?? false,
+    latitude: entry.latitude,
+    longitude: entry.longitude,
     photo: entry.photo ?? '',
     notes: entry.notes ?? ''
   }
@@ -307,8 +539,16 @@ const installApp = async () => {
   }
 }
 
+const openMasterData = (section: typeof activeMasterData.value) => {
+  activeMasterData.value = section
+  activeTab.value = 'masterdata'
+}
+
 const selectedSession = computed(() =>
   sessions.value.find((session) => session.id === selectedSessionId.value) ?? null
+)
+const activeGearSection = computed<'rods' | 'baits' | 'montages'>(() =>
+  activeMasterData.value === 'waters' ? 'rods' : activeMasterData.value
 )
 const catchesForSelectedSession = computed(() =>
   catches.value.filter((entry) => entry.sessionId === selectedSessionId.value)
@@ -338,8 +578,26 @@ onUnmounted(() => {
       <div class="navbar-menu is-active">
         <div class="navbar-start">
           <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'events'">Ereignisse</button>
-          <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'waters'">Gewässer</button>
-          <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'gear'">Köder &amp; Ruten</button>
+          <div class="masterdata-menu">
+            <button
+              class="navbar-item button is-primary is-inverted is-light"
+              :aria-expanded="activeTab === 'masterdata'"
+              @click="openMasterData(activeMasterData)"
+            >
+              Stammdaten
+            </button>
+            <div v-if="activeTab === 'masterdata'" class="masterdata-submenu" aria-label="Stammdaten">
+              <button
+                v-for="item in masterDataItems"
+                :key="item.id"
+                class="navbar-item button is-primary is-inverted is-light"
+                :class="{ 'is-selected': activeMasterData === item.id }"
+                @click="openMasterData(item.id)"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+          </div>
           <button class="navbar-item button is-primary is-inverted is-light" @click="activeTab = 'summary'">Übersicht</button>
           <button
             v-if="installPrompt"
@@ -382,6 +640,7 @@ onUnmounted(() => {
             :species="species"
             :rods="rods"
             :baits="baits"
+            :montages="montages"
             :catches="catchesForSelectedSession"
             :session="selectedSession"
             :editing-catch-id="editingCatchId"
@@ -394,20 +653,42 @@ onUnmounted(() => {
       </section>
 
       <WaterView
-        v-else-if="activeTab === 'waters'"
+        v-else-if="activeTab === 'masterdata' && activeMasterData === 'waters'"
         v-model="waterForm"
         :waters="waters"
-        @submit="addWater"
+        :editing-water-id="editingWaterId"
+        :message="waterMessage"
+        @submit="saveWater"
+        @edit="editWater"
+        @delete="deleteWater"
+        @cancel-edit="cancelWaterEdit"
       />
 
       <GearView
-        v-else-if="activeTab === 'gear'"
+        v-else-if="activeTab === 'masterdata'"
         v-model:bait-form="baitForm"
+        v-model:montage-form="montageForm"
         v-model:rod-form="rodForm"
+        :section="activeGearSection"
+        :editing-bait-id="editingBaitId"
+        :editing-montage-id="editingMontageId"
+        :editing-rod-id="editingRodId"
+        :message="gearMessage"
         :baits="baits"
+        :montages="montages"
         :rods="rods"
-        @add-bait="addBait"
-        @add-rod="addRod"
+        @save-bait="saveBait"
+        @edit-bait="editBait"
+        @delete-bait="deleteBait"
+        @cancel-bait-edit="cancelBaitEdit"
+        @save-montage="saveMontage"
+        @edit-montage="editMontage"
+        @delete-montage="deleteMontage"
+        @cancel-montage-edit="cancelMontageEdit"
+        @save-rod="saveRod"
+        @edit-rod="editRod"
+        @delete-rod="deleteRod"
+        @cancel-rod-edit="cancelRodEdit"
       />
 
       <SummaryView
@@ -453,6 +734,19 @@ onUnmounted(() => {
 .navbar-start {
   display: flex;
   flex-wrap: wrap;
+}
+
+.masterdata-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.masterdata-submenu {
+  display: flex;
+  flex-wrap: wrap;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
 }
 
 .navbar-menu.is-active {

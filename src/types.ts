@@ -1,12 +1,13 @@
-export type Precipitation = 'Kein' | 'Leicht' | 'Stark'
+export type Precipitation = 'Kein' | 'Leicht' | 'Mittel' | 'Stark'
 export type RodType = 'Teleskop' | 'Feeder' | 'Karpfenrute' | 'Barschrute' | 'Sonstige'
-export type BaitKind = 'Lebend' | 'Kunstköder'
-export type BaitCategory = 'Vorfach' | 'Haken' | 'Köder'
+export type BaitKind = 'Lebend' | 'Kunstköder' | 'Organisch'
 
 export type Water = {
   id: string
   name: string
   location: string
+  latitude?: number
+  longitude?: number
 }
 
 export type FishSpecies = {
@@ -22,9 +23,13 @@ export type Rod = {
 
 export type Bait = {
   id: string
-  category: BaitCategory
   name: string
   kind: BaitKind
+}
+
+export type Montage = {
+  id: string
+  title: string
 }
 
 export type CatchEntry = {
@@ -36,6 +41,11 @@ export type CatchEntry = {
   weightKg?: number
   rodId: string
   baitId: string
+  montageId?: string
+  montageWeight?: number
+  retained?: boolean
+  latitude?: number
+  longitude?: number
   photo?: string
   notes?: string
 }
@@ -52,6 +62,7 @@ export type FishingSession = {
 
 export type FishingSessionForm = Omit<FishingSession, 'id'>
 export type CatchForm = Omit<CatchEntry, 'id' | 'sessionId'>
-export type WaterForm = Pick<Water, 'name' | 'location'>
+export type WaterForm = Omit<Water, 'id'>
 export type BaitForm = Omit<Bait, 'id'>
+export type MontageForm = Pick<Montage, 'title'>
 export type RodForm = Omit<Rod, 'id'>
