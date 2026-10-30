@@ -298,6 +298,7 @@ const getWeatherFromLocation = async () => {
         <label class="label">Gewässer</label>
         <div class="select is-fullwidth">
           <select v-model="form.waterId">
+            <option disabled value="">Gewässer auswählen</option>
             <option v-for="water in waters" :key="water.id" :value="water.id">
               {{ water.location ? `${water.name} (${water.location})` : water.name }}
             </option>

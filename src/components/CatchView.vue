@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Bait, CatchEntry, CatchForm, FishSpecies, FishingSession, Montage, Rod, Water } from '../types'
 
 const props = withDefaults(defineProps<{
@@ -13,14 +13,17 @@ const props = withDefaults(defineProps<{
   editingCatchId: string | null
   showCatchList?: boolean
   showCancel?: boolean
+  autoLocate?: boolean
 }>(), {
   showCatchList: true,
-  showCancel: false
+  showCancel: false,
+  autoLocate: true
 })
 const form = defineModel<CatchForm>({ required: true })
 const isGettingPosition = ref(false)
 const positionMessage = ref('')
 const positionError = ref('')
+let positionRequest = 0
 const emit = defineEmits<{
   submit: []
   edit: [catchId: string]
@@ -48,13 +51,16 @@ const openStreetMapUrl = computed(() => {
 })
 
 const setCoordinate = (coordinate: 'latitude' | 'longitude', event: Event) => {
+  positionRequest++
+  isGettingPosition.value = false
   const input = event.target as HTMLInputElement
   form.value[coordinate] = input.value === '' ? undefined : input.valueAsNumber
   positionMessage.value = ''
   positionError.value = ''
 }
 
-const getCurrentPosition = () => {
+const getCurrentPosition = (automatic = false) => {
+  const request = ++positionRequest
   positionMessage.value = ''
   positionError.value = ''
 
@@ -70,12 +76,14 @@ const getCurrentPosition = () => {
   isGettingPosition.value = true
   navigator.geolocation.getCurrentPosition(
     (position) => {
+      if (request !== positionRequest || (automatic && !props.autoLocate)) return
       form.value.latitude = position.coords.latitude
       form.value.longitude = position.coords.longitude
       isGettingPosition.value = false
       positionMessage.value = 'Aktuelle Position übernommen.'
     },
     (error) => {
+      if (request !== positionRequest || (automatic && !props.autoLocate)) return
       isGettingPosition.value = false
       if (error.code === error.PERMISSION_DENIED) {
         positionError.value = 'Der Zugriff auf den Standort wurde verweigert. Bitte erteile dem Browser die Berechtigung.'
@@ -96,9 +104,18 @@ const submitCatch = () => {
   emit('submit')
 }
 
+watch([() => props.autoLocate, () => props.editingCatchId, () => form.value], () => {
+  positionRequest++
+  isGettingPosition.value = false
+  positionMessage.value = ''
+  positionError.value = ''
+}, { flush: 'sync' })
+
 onMounted(() => {
-  if (!props.editingCatchId) getCurrentPosition()
+  if (props.autoLocate && !props.editingCatchId) getCurrentPosition(true)
 })
+
+onUnmounted(() => { positionRequest++ })
 </script>
 
 <template>
@@ -199,7 +216,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="buttons">
-          <button class="button is-light" type="button" :disabled="isGettingPosition" @click="getCurrentPosition">
+          <button class="button is-light" type="button" :disabled="isGettingPosition" @click="getCurrentPosition()">
             <span aria-hidden="true">◎</span>&nbsp;
             {{ isGettingPosition ? 'Position wird ermittelt …' : 'Aktuelle Position' }}
           </button>

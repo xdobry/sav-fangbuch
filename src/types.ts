@@ -63,7 +63,26 @@ export type FishingSession = {
   waterId: string
 }
 
+export type FangbuchData = {
+  waters: Water[]
+  rods: Rod[]
+  baits: Bait[]
+  montages: Montage[]
+  sessions: FishingSession[]
+  catches: CatchEntry[]
+}
+
 export type FishingSessionForm = Omit<FishingSession, 'id'>
+export type PhotoMetadata = {
+  time: string
+  latitude: number
+  longitude: number
+}
+
+export type PhotoSessionPlan =
+  | { kind: 'existing'; session: FishingSession }
+  | { kind: 'new' | 'manual'; session: FishingSessionForm }
+
 export type CatchForm = Omit<CatchEntry, 'id' | 'sessionId'>
 export type WaterForm = Omit<Water, 'id'>
 export type BaitForm = Omit<Bait, 'id'>
