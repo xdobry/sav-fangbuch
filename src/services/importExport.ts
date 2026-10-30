@@ -129,7 +129,7 @@ export const createCsv = (data: FangbuchData, species: FishSpecies[]) => {
   const columns = [
     'session_id', 'session_from', 'session_to', 'water_id', 'water_name',
     'temperature_c', 'cloud_cover_percent', 'precipitation', 'wind_speed_kmh',
-    'wind_direction_degrees', 'weather_code', 'catch_id', 'catch_time',
+    'wind_direction_degrees', 'weather_code', 'sunrise', 'sunset', 'catch_id', 'catch_time',
     'species_id', 'species_name', 'length_cm', 'weight_kg', 'rod_id',
     'rod_type', 'rod_length_m', 'bait_id', 'bait_name', 'bait_kind',
     'montage_id', 'montage_title', 'montage_weight', 'retained',
@@ -151,7 +151,7 @@ export const createCsv = (data: FangbuchData, species: FishSpecies[]) => {
       return [
         session.id, session.from, session.to, session.waterId, water?.name,
         session.temperature, session.population, session.precipitation, session.windSpeed10m,
-        session.windDirection10m, session.weatherCode, entry?.id, entry?.time,
+        session.windDirection10m, session.weatherCode, session.sunrise, session.sunset, entry?.id, entry?.time,
         entry?.speciesId, speciesEntry?.name, entry?.lengthCm, entry?.weightKg, entry?.rodId,
         rod?.type, rod?.length, entry?.baitId, bait?.name, bait?.kind, entry?.montageId,
         montage?.title, entry?.montageWeight, entry?.retained, entry?.latitude,
@@ -162,7 +162,7 @@ export const createCsv = (data: FangbuchData, species: FishSpecies[]) => {
   const orphanCatches = catches.filter((entry) => !sessionById.has(entry.sessionId))
   for (const entry of orphanCatches) {
     rows.push([
-      entry.sessionId, '', '', '', '', '', '', '', '', '', '', entry.id, entry.time,
+      entry.sessionId, '', '', '', '', '', '', '', '', '', '', '', '', entry.id, entry.time,
       entry.speciesId, species.find((item) => item.id === entry.speciesId)?.name,
       entry.lengthCm, entry.weightKg, entry.rodId,
       rods.find((item) => item.id === entry.rodId)?.type,

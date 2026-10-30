@@ -23,6 +23,11 @@ const weatherMessage = ref('')
 const weatherError = ref('')
 
 type WeatherResponse = {
+  daily?: {
+    time?: string[]
+    sunrise?: (string | null)[]
+    sunset?: (string | null)[]
+  }
   hourly?: {
     time?: string[]
     temperature_2m?: (number | null)[]
@@ -234,6 +239,15 @@ const getWeatherFromLocation = async () => {
       throw new Error('Für diesen Zeitpunkt sind keine vollständigen Wetterdaten verfügbar.')
     }
 
+    const dayIndex = weather.daily?.time?.indexOf(selectedDate) ?? -1
+    const getSunTime = (value: string | null | undefined) => {
+      if (!value?.startsWith(`${selectedDate}T`)) return undefined
+      const time = value.slice(11)
+      return /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : undefined
+    }
+
+    form.value.sunrise = getSunTime(weather.daily?.sunrise?.[dayIndex])
+    form.value.sunset = getSunTime(weather.daily?.sunset?.[dayIndex])
     form.value.temperature = temperature
     form.value.population = cloudCover
     form.value.windSpeed10m = windSpeed
@@ -293,6 +307,14 @@ const getWeatherFromLocation = async () => {
       <div class="column is-one-third">
         <label class="label">Wettercode</label>
         <input v-model.number="form.weatherCode" type="number" min="0" step="1" class="input" />
+      </div>
+      <div class="column is-half">
+        <label class="label" for="session-sunrise">Sonnenaufgang</label>
+        <input id="session-sunrise" v-model="form.sunrise" type="time" class="input" />
+      </div>
+      <div class="column is-half">
+        <label class="label" for="session-sunset">Sonnenuntergang</label>
+        <input id="session-sunset" v-model="form.sunset" type="time" class="input" />
       </div>
       <div class="column is-full">
         <label class="label">Gewässer</label>

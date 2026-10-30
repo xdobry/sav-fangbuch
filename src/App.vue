@@ -348,6 +348,8 @@ const addFishingSession = () => {
     windSpeed10m: sessionForm.value.windSpeed10m,
     windDirection10m: sessionForm.value.windDirection10m,
     weatherCode: sessionForm.value.weatherCode,
+    sunrise: sessionForm.value.sunrise,
+    sunset: sessionForm.value.sunset,
     waterId: sessionForm.value.waterId
   }
   data.value.sessions.unshift(newSession)
@@ -375,6 +377,8 @@ const saveActiveTour = () => {
     windSpeed10m: sessionForm.value.windSpeed10m,
     windDirection10m: sessionForm.value.windDirection10m,
     weatherCode: sessionForm.value.weatherCode,
+    sunrise: sessionForm.value.sunrise,
+    sunset: sessionForm.value.sunset,
     waterId: sessionForm.value.waterId
   }
   editingSessionId.value = null
@@ -421,10 +425,7 @@ const startTour = () => {
   isStartingTour.value = true
 }
 
-const editActiveTour = () => {
-  const session = activeSession.value
-  if (!session) return
-
+const editTour = (session: FishingSession) => {
   editingSessionId.value = session.id
   sessionForm.value = {
     from: session.from,
@@ -435,10 +436,14 @@ const editActiveTour = () => {
     windSpeed10m: session.windSpeed10m,
     windDirection10m: session.windDirection10m,
     weatherCode: session.weatherCode,
+    sunrise: session.sunrise,
+    sunset: session.sunset,
     waterId: session.waterId
   }
   tourMessage.value = ''
-  isStartingTour.value = true
+  isCreatingTour.value = false
+  isStartingTour.value = activeTab.value === 'home'
+  expandedSessionId.value = session.id
 }
 
 const cancelTourForm = () => {
@@ -473,6 +478,7 @@ const discardActiveTour = () => {
 
 const openNewTourForm = () => {
   const now = getLocalDateTime()
+  editingSessionId.value = null
   sessionForm.value = {
     ...sessionForm.value,
     from: now,
@@ -874,7 +880,7 @@ onUnmounted(() => {
               </p>
               <div class="buttons">
                 <button class="button is-warning" type="button" @click="endTour">Tour beenden</button>
-                <button class="button is-light" type="button" @click="editActiveTour">Tour bearbeiten</button>
+                <button class="button is-light" type="button" @click="editTour(activeSession)">Tour bearbeiten</button>
                 <button class="button is-danger is-light" type="button" @click="discardActiveTour">Tour verwerfen</button>
               </div>
             </template>
@@ -1015,6 +1021,15 @@ onUnmounted(() => {
                   🐟
                 </button>
                 <button
+                  class="button is-light tour-edit"
+                  type="button"
+                  :aria-label="`Tour am ${formatCatchDate(session.from)} bearbeiten`"
+                  title="Tour bearbeiten"
+                  @click="editTour(session)"
+                >
+                  <span aria-hidden="true">✎</span>
+                </button>
+                <button
                   v-if="catchesForSession(session.id).length === 0"
                   class="button is-danger is-light tour-delete"
                   type="button"
@@ -1027,6 +1042,16 @@ onUnmounted(() => {
               </div>
 
               <div v-if="expandedSessionId === session.id" class="tour-details">
+                <FishingEventForm
+                  v-if="editingSessionId === session.id"
+                  v-model="sessionForm"
+                  :waters="data.waters"
+                  heading="Tour bearbeiten"
+                  submit-label="Tour speichern"
+                  :show-cancel="true"
+                  @submit="saveActiveTour"
+                  @cancel="cancelTourForm"
+                />
                 <p v-if="catchesForSession(session.id).length === 0" class="has-text-grey">
                   Für diese Tour sind noch keine Fänge erfasst.
                 </p>
@@ -1262,6 +1287,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
 }
 
+.tour-edit,
 .tour-delete {
   align-self: center;
   flex: none;

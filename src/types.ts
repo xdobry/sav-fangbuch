@@ -60,6 +60,8 @@ export type FishingSession = {
   windSpeed10m?: number
   windDirection10m?: number
   weatherCode?: number
+  sunrise?: string
+  sunset?: string
   waterId: string
 }
 
