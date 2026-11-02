@@ -112,7 +112,7 @@ watch([() => props.autoLocate, () => props.editingCatchId, () => form.value], ()
 }, { flush: 'sync' })
 
 onMounted(() => {
-  if (props.autoLocate && !props.editingCatchId) getCurrentPosition(true)
+  if (props.autoLocate && !props.editingCatchId && !form.value.longitude) getCurrentPosition(true)
 })
 
 onUnmounted(() => { positionRequest++ })

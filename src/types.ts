@@ -63,6 +63,7 @@ export type FishingSession = {
   sunrise?: string
   sunset?: string
   waterId: string
+  notes?: string
 }
 
 export type FangbuchData = {

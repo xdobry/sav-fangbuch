@@ -263,6 +263,15 @@ const getWeatherFromLocation = async () => {
     isLoadingWeather.value = false
   }
 }
+
+const syncToDate = () => {
+  const from = form.value.from
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(from)) return
+  const to = form.value.to
+  form.value.to = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(to)
+    ? `${from.slice(0, 10)}${to.slice(10)}`
+    : from
+}
 </script>
 
 <template>
@@ -271,7 +280,7 @@ const getWeatherFromLocation = async () => {
     <div class="columns is-multiline">
       <div class="column is-half">
         <label class="label">Von</label>
-        <input v-model="form.from" type="datetime-local" class="input" />
+        <input v-model="form.from" type="datetime-local" class="input" @change="syncToDate" />
       </div>
       <div class="column is-half">
         <label class="label">Bis</label>
@@ -358,6 +367,10 @@ const getWeatherFromLocation = async () => {
           <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
           (CC BY 4.0)
         </p>
+        <div class="column is-full">
+          <label class="label">Notiz</label>
+          <textarea v-model="form.notes" class="textarea" rows="3" placeholder="Notizen zum Tour..." />
+        </div>
       </div>
     </div>
     <div class="buttons mt-3">

@@ -65,8 +65,8 @@ const baitForm = ref<BaitForm>({ name: '', kind: 'Kunstköder' })
 const montageForm = ref<MontageForm>({ title: '' })
 const rodForm = ref<RodForm>({ type: 'Teleskop', length: 3.6 })
 const sessionForm = ref<FishingSessionForm>({
-  from: new Date().toISOString().slice(0, 16),
-  to: new Date().toISOString().slice(0, 16),
+  from: getLocalDateTime(),
+  to: getLocalDateTime(),
   temperature: 18,
   population: 50,
   precipitation: 'Kein',
@@ -91,7 +91,7 @@ const latestCatch = () =>
 const createCatchForm = (): CatchForm => {
   const previousCatch = latestCatch()
   return {
-    time: new Date().toISOString().slice(0, 16),
+    time: getLocalDateTime(),
     speciesId: previousCatch?.speciesId ?? species[0]?.id ?? '',
     lengthCm: previousCatch?.lengthCm ?? 25,
     weightKg: 0.0,
@@ -350,7 +350,8 @@ const addFishingSession = () => {
     weatherCode: sessionForm.value.weatherCode,
     sunrise: sessionForm.value.sunrise,
     sunset: sessionForm.value.sunset,
-    waterId: sessionForm.value.waterId
+    waterId: sessionForm.value.waterId,
+    notes: sessionForm.value.notes
   }
   data.value.sessions.unshift(newSession)
   cancelCatchEdit()
@@ -379,7 +380,8 @@ const saveActiveTour = () => {
     weatherCode: sessionForm.value.weatherCode,
     sunrise: sessionForm.value.sunrise,
     sunset: sessionForm.value.sunset,
-    waterId: sessionForm.value.waterId
+    waterId: sessionForm.value.waterId,
+    notes: sessionForm.value.notes
   }
   editingSessionId.value = null
   isStartingTour.value = false
@@ -438,7 +440,8 @@ const editTour = (session: FishingSession) => {
     weatherCode: session.weatherCode,
     sunrise: session.sunrise,
     sunset: session.sunset,
-    waterId: session.waterId
+    waterId: session.waterId,
+    notes: session.notes
   }
   tourMessage.value = ''
   isCreatingTour.value = false
@@ -483,7 +486,8 @@ const openNewTourForm = () => {
     ...sessionForm.value,
     from: now,
     to: now,
-    waterId: sessionForm.value.waterId || data.value.waters[0]?.id || ''
+    waterId: sessionForm.value.waterId || data.value.waters[0]?.id || '',
+    notes: '',    
   }
   tourMessage.value = ''
   isCreatingTour.value = true
@@ -625,11 +629,26 @@ const enterCatch = () => {
 }
 
 const addCatchToTour = (sessionId: string) => {
-  cancelCatchEdit()
-  selectedSessionId.value = sessionId
-  expandedSessionId.value = sessionId
-  catchForm.value.time = getLocalDateTime()
-  isEnteringCatch.value = true
+  const session = data.value.sessions.find((entry) => entry.id === sessionId)
+  if (session) {
+    cancelCatchEdit()
+    selectedSessionId.value = sessionId
+    expandedSessionId.value = sessionId
+    if (session.from.slice(0,10)==getLocalDateTime().slice(0,10)) {
+       catchForm.value.time = getLocalDateTime()
+       catchForm.value.latitude = undefined;
+       catchForm.value.longitude = undefined;
+    } else {
+      catchForm.value.time = session.from
+      // copy location from water because we are adding historical data
+      const water = data.value.waters.find((entry) => entry.id = session.waterId)
+      if (water) {
+        catchForm.value.latitude = water.latitude
+        catchForm.value.longitude = water.longitude
+      }
+    }
+    isEnteringCatch.value = true
+  }
 }
 
 const toggleTour = (sessionId: string) => {
@@ -795,12 +814,7 @@ const formatCatchDate = (time: string) => {
   const date = new Date(time)
   return Number.isNaN(date.getTime()) ? time : date.toLocaleDateString('de-DE')
 }
-const totalCatches = computed(() => data.value.catches.length)
-const totalWeight = computed(() => data.value.catches.reduce((sum, entry) => sum + (entry.weightKg ?? 0), 0))
-const biggestCatch = computed(() => {
-  if (!data.value.catches.length) return null
-  return [...data.value.catches].sort((a, b) => b.lengthCm - a.lengthCm)[0] ?? null
-})
+
 
 onMounted(() => {
   loadData()
@@ -1135,10 +1149,7 @@ onUnmounted(() => {
 
       <SummaryView
         v-else
-        :total-catches="totalCatches"
-        :total-weight="totalWeight"
-        :biggest-catch="biggestCatch"
-        :sessions="data.sessions"
+        :sessions="sortedSessions"
         :catches="data.catches"
         :waters="data.waters"
         :species="species"
@@ -1154,11 +1165,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-:global(body) {
-  background: #edf6ff;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
 .app-shell {
   min-height: 100vh;
 }
@@ -1218,10 +1224,6 @@ onUnmounted(() => {
   padding: 0.25rem;
 }
 
-.box {
-  border-radius: 16px;
-}
-
 .content ul {
   margin-left: 1.25rem;
 }
@@ -1244,6 +1246,19 @@ onUnmounted(() => {
   border: 1px solid #d5e0eb;
   border-radius: 12px;
   background: #fff;
+}
+
+.tour-item {
+  overflow: hidden;
+  border: 1px solid #d5e0eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tour-item {
+    background: #1f2937;
+  }
 }
 
 .tour-heading {
