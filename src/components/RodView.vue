@@ -27,6 +27,11 @@ defineEmits<{
             <option>Feeder</option>
             <option>Karpfenrute</option>
             <option>Barschrute</option>
+            <option>Fliegerrute</option>
+            <option>Stipprute</option>
+            <option>Grundrute</option>
+            <option>Pilkrute</option>
+            <option>Matchrute</option>
             <option>Sonstige</option>
           </select>
         </div>

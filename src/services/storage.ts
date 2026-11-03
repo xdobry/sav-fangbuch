@@ -31,6 +31,19 @@ export const loadStoredData = (): { data: FangbuchData; needsSave: boolean } | n
   let migratedCatches = false
   const storedSpecies = Object.prototype.hasOwnProperty.call(parsed, 'species')
 
+  // fix swaped gps location for old code
+  const old_stockenberger_water = waters.find((w) => w.id==='stoeckenbergsee' && w.latitude===51.04701564905807)
+  if (old_stockenberger_water) {
+    old_stockenberger_water.latitude = 51.07135766552641
+    old_stockenberger_water.longitude = 6.9336335602489845
+    const silbersee = waters.find((w) => w.id==='grosser-silbersee' && w.latitude===51.04701564905807)
+    if (silbersee) {
+      silbersee.latitude = 51.04701564905807
+      silbersee.longitude = 7.0097765516169375
+    }
+    migratedCatches = true
+  }
+
   const catches = loadedCatches.map((entry) => {
     if (entry.sessionId && sessions.some((session) => session.id === entry.sessionId)) return entry
 
