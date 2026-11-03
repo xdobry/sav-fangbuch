@@ -1,6 +1,6 @@
 export type Precipitation = 'Kein' | 'Leicht' | 'Mittel' | 'Stark'
-export type RodType = 'Teleskop' | 'Feeder' | 'Karpfenrute' | 'Barschrute' | 'Sonstige'
-export type BaitKind = 'Lebend' | 'Kunstköder' | 'Organisch'
+export type RodType = 'Teleskop' | 'Feeder' | 'Karpfenrute' | 'Barschrute' | 'Fliegerrute' | 'Stipprute' | 'Grundrute' | 'Pilkrute' | 'Matchrute' | 'Sonstige'
+export type BaitKind = 'Lebend' | 'Kunstköder' | 'Organisch' | 'Pflanzlich'
 
 export type Water = {
   id: string
@@ -19,6 +19,7 @@ export type Rod = {
   id: string
   type: RodType
   length: number
+  notes?: string
 }
 
 export type Bait = {
@@ -78,8 +79,8 @@ export type FangbuchData = {
 export type FishingSessionForm = Omit<FishingSession, 'id'>
 export type PhotoMetadata = {
   time: string
-  latitude: number
-  longitude: number
+  latitude?: number
+  longitude?: number
 }
 
 export type PhotoSessionPlan =

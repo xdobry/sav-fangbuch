@@ -14,6 +14,7 @@ const isImportedSession = (value: unknown): value is FishingSession => {
     && typeof value.population === 'number'
     && Number.isFinite(value.population)
     && ['Kein', 'Leicht', 'Mittel', 'Stark'].includes(String(value.precipitation))
+    && (value.notes === undefined || typeof value.notes === 'string')
 }
 
 const isImportedCatch = (value: unknown): value is CatchEntry => {
@@ -133,7 +134,7 @@ export const createCsv = (data: FangbuchData, species: FishSpecies[]) => {
     'species_id', 'species_name', 'length_cm', 'weight_kg', 'rod_id',
     'rod_type', 'rod_length_m', 'bait_id', 'bait_name', 'bait_kind',
     'montage_id', 'montage_title', 'montage_weight', 'retained',
-    'latitude', 'longitude', 'photo', 'notes'
+    'latitude', 'longitude', 'photo', 'notes', 'session_notes'
   ]
   const quoteCsv = (value: unknown) => {
     const text = value === undefined || value === null ? '' : String(value)
@@ -155,7 +156,7 @@ export const createCsv = (data: FangbuchData, species: FishSpecies[]) => {
         entry?.speciesId, speciesEntry?.name, entry?.lengthCm, entry?.weightKg, entry?.rodId,
         rod?.type, rod?.length, entry?.baitId, bait?.name, bait?.kind, entry?.montageId,
         montage?.title, entry?.montageWeight, entry?.retained, entry?.latitude,
-        entry?.longitude, entry?.photo, entry?.notes
+        entry?.longitude, entry?.photo, entry?.notes, session.notes
       ]
     })
   })
@@ -170,7 +171,7 @@ export const createCsv = (data: FangbuchData, species: FishSpecies[]) => {
       entry.baitId, baits.find((item) => item.id === entry.baitId)?.name,
       baits.find((item) => item.id === entry.baitId)?.kind, entry.montageId,
       montages.find((item) => item.id === entry.montageId)?.title,
-      entry.montageWeight, entry.retained, entry.latitude, entry.longitude, entry.photo, entry.notes
+      entry.montageWeight, entry.retained, entry.latitude, entry.longitude, entry.photo, entry.notes, ''
     ])
   }
 

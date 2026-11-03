@@ -32,14 +32,15 @@ export const parsePhotoMetadata = (tags: ExpandedTags): PhotoMetadata | null => 
     ?? parseExifTime(tags.exif?.DateTimeDigitized?.value[0])
   const latitude = tags.gps?.Latitude
   const longitude = tags.gps?.Longitude
-  if (
-    !time
-    || latitude === undefined || longitude === undefined
+  const misingGPS = latitude === undefined || longitude === undefined
     || !Number.isFinite(latitude) || !Number.isFinite(longitude)
     || latitude < -90 || latitude > 90
     || longitude < -180 || longitude > 180
-  ) return null
-
+  if (!time) {
+    return null;
+  } else if (misingGPS) {
+    return { time  }
+  }
   return { time, latitude, longitude }
 }
 

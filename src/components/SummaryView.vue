@@ -1,19 +1,48 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { Bait, CatchEntry, FishSpecies, FishingSession, Rod, Water } from '../types'
+import { exportCsvFile, exportJsonFile, importJsonData } from '../services/importExport'
+import type { FangbuchData, FishSpecies } from '../types'
 
 const props = defineProps<{
-  sessions: FishingSession[]
-  catches: CatchEntry[]
-  waters: Water[]
   species: FishSpecies[]
-  rods: Rod[]
-  baits: Bait[]
-  dataMessage: string
 }>()
 
+const data = defineModel<FangbuchData>('data', { required: true })
+const dataMessage = ref('')
+const sessions = computed(() =>
+  [...data.value.sessions].sort((first, second) => second.from.localeCompare(first.from))
+)
 const filterSpecie = ref('all')
 const filterWater = ref('all')
+
+const speciesSummary = computed(() => {
+  const summary = new Map<string, {
+    speciesId: string
+    name: string
+    caught: number
+    retained: number
+    maxLengthCm: number
+  }>()
+  for (const entry of data.value.catches) {
+    let row = summary.get(entry.speciesId)
+    if (!row) {
+      row = {
+        speciesId: entry.speciesId,
+        name: props.species.find((fish) => fish.id === entry.speciesId)?.name ?? 'Unbekannter Fisch',
+        caught: 0,
+        retained: 0,
+        maxLengthCm: 0,
+      }
+      summary.set(entry.speciesId, row)
+    }
+    row.caught += 1
+    if (entry.retained) row.retained += 1
+    row.maxLengthCm = Math.max(row.maxLengthCm, entry.lengthCm)
+  }
+  return [...summary.values()].sort((first, second) =>
+    second.caught - first.caught || first.name.localeCompare(second.name, 'de')
+  )
+})
 
 const stats = computed(() => {
   const stats = {
@@ -21,10 +50,10 @@ const stats = computed(() => {
     totalWeight: 0.0,
     biggestCatch: 0.0,
   }
-  for (const one_catch of props.catches) {
+  for (const one_catch of data.value.catches) {
     if (filterSpecie.value==='all' || filterSpecie.value === one_catch.speciesId) {
       if (filterWater.value!=='all') {
-        const session = props.sessions.find((entry) => entry.id === one_catch.sessionId)
+        const session = sessions.value.find((entry) => entry.id === one_catch.sessionId)
         if (session && session.waterId!==filterWater.value) {
           continue;
         }
@@ -42,16 +71,38 @@ const stats = computed(() => {
 })
 
 const emit = defineEmits<{
-  exportJson: []
-  exportCsv: []
-  importData: [file: File]
+  save: []
 }>()
 const importInput = ref<HTMLInputElement | null>(null)
+
+const exportJson = () => {
+  exportJsonFile(data.value)
+  dataMessage.value = 'JSON-Export wurde heruntergeladen.'
+}
+
+const exportCsv = () => {
+  exportCsvFile(data.value, props.species)
+  dataMessage.value = 'CSV-Export wurde heruntergeladen.'
+}
+
+const importData = async (file: File) => {
+  dataMessage.value = ''
+  try {
+    const imported = importJsonData(await file.text(), data.value)
+    data.value = imported.data
+    emit('save')
+    dataMessage.value = `${imported.addedSessions} Tour(en) und ${imported.addedCatches} Fang/Fänge importiert. Vorhandene Datensätze wurden beibehalten.`
+  } catch (error) {
+    dataMessage.value = error instanceof Error
+      ? `Import fehlgeschlagen: ${error.message}`
+      : 'Import fehlgeschlagen: Die Datei konnte nicht gelesen werden.'
+  }
+}
 
 const onImportSelected = (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (file) emit('importData', file)
+  if (file) void importData(file)
   input.value = ''
 }
 </script>
@@ -64,13 +115,37 @@ const onImportSelected = (event: Event) => {
       <div class="box">
         <h2 class="subtitle is-6">Daten</h2>
         <div class="buttons">
-          <button class="button is-primary" type="button" @click="emit('exportJson')">Export JSON</button>
+          <button class="button is-primary" type="button" @click="exportJson">Export JSON</button>
           <button class="button" type="button" @click="importInput?.click()">Import Data</button>
-          <button class="button" type="button" @click="emit('exportCsv')">Export CSV</button>
+          <button class="button" type="button" @click="exportCsv">Export CSV</button>
           <input ref="importInput" class="is-hidden" type="file" accept="application/json,.json"
             aria-label="JSON-Datei zum Import auswählen" @change="onImportSelected" />
         </div>
         <p v-if="dataMessage" class="help" role="status">{{ dataMessage }}</p>
+      </div>
+
+      <div class="table-container mb-5">
+        <table class="table is-fullwidth is-striped">
+          <thead>
+            <tr>
+              <th scope="col">Fischart</th>
+              <th scope="col" class="has-text-right">Gefangen</th>
+              <th scope="col" class="has-text-right">Entnommen</th>
+              <th scope="col" class="has-text-right">Max Länge</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in speciesSummary" :key="row.speciesId">
+              <th scope="row">{{ row.name }}</th>
+              <td class="has-text-right">{{ row.caught }}</td>
+              <td class="has-text-right">{{ row.retained }}</td>
+              <td class="has-text-right">{{ row.maxLengthCm }} cm</td>
+            </tr>
+            <tr v-if="speciesSummary.length === 0">
+              <td colspan="4" class="has-text-grey">Noch keine Fänge.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="columns is-multiline">
@@ -88,7 +163,7 @@ const onImportSelected = (event: Event) => {
             <div class="select is-fullwidth">
               <select v-model="filterWater">
                 <option value="all">Alle Gewässer</option>
-                <option v-for="water in waters" :key="water.id" :value="water.id">
+                <option v-for="water in data.waters" :key="water.id" :value="water.id">
                   {{ water.location ? `${water.name} (${water.location})` : water.name }}
                 </option>
               </select>
@@ -123,10 +198,10 @@ const onImportSelected = (event: Event) => {
         <div v-if="sessions.length === 0" class="has-text-grey">Noch keine Touren.</div>
         <div v-else>
           <article v-for="session in sessions.filter((s) => (filterWater==='all' || s.waterId===filterWater) &&
-            (filterSpecie==='all' || catches.some((c) => c.sessionId===s.id && c.speciesId===filterSpecie)))" :key="session.id" class="mb-5">
+            (filterSpecie==='all' || data.catches.some((c) => c.sessionId===s.id && c.speciesId===filterSpecie)))" :key="session.id" class="mb-5">
             <h3 class="title is-6">
               {{ session.from }}{{ session.to ? ` bis ${session.to}` : ' · aktiv' }} ·
-              {{waters.find((water) => water.id === session.waterId)?.name ?? 'Unbekanntes Gewässer'}}
+              {{data.waters.find((water) => water.id === session.waterId)?.name ?? 'Unbekanntes Gewässer'}}
             </h3>
             <p class="mb-2">
               {{ session.temperature }}°C · {{ session.population }}% Bewölkung · {{ session.precipitation }}
@@ -135,18 +210,18 @@ const onImportSelected = (event: Event) => {
               <span v-if="session.weatherCode !== undefined"> · Wettercode {{ session.weatherCode }}</span>
             </p>
             <h4 class="has-text-weight-semibold">Fischfänge</h4>
-            <p v-if="!catches.some((entry) => entry.sessionId === session.id)" class="has-text-grey">
+            <p v-if="!data.catches.some((entry) => entry.sessionId === session.id)" class="has-text-grey">
               Keine Fischfänge zu dieser Tour.
             </p>
             <ul v-else>
-              <li v-for="entry in catches.filter((catchEntry) => catchEntry.sessionId === session.id && 
+              <li v-for="entry in data.catches.filter((catchEntry) => catchEntry.sessionId === session.id && 
                 (filterSpecie==='all' || catchEntry.speciesId===filterSpecie))" :key="entry.id">
                 {{species.find((fish) => fish.id === entry.speciesId)?.name ?? 'Unbekannter Fisch'
                 }} ·
                 {{ entry.lengthCm }} cm · {{ entry.time }}
                 <span v-if="entry.weightKg">· {{ entry.weightKg }} kg</span>
-                · Rute: {{rods.find((rod) => rod.id === entry.rodId)?.type ?? 'Unbekannte Rute'}}
-                · Köder: {{baits.find((bait) => bait.id === entry.baitId)?.name ?? 'Unbekannter Köder'}}
+                · Rute: {{data.rods.find((rod) => rod.id === entry.rodId)?.type ?? 'Unbekannte Rute'}}
+                · Köder: {{data.baits.find((bait) => bait.id === entry.baitId)?.name ?? 'Unbekannter Köder'}}
               </li>
             </ul>
           </article>

@@ -5,7 +5,7 @@ export const extendSessionToCatch = (session: Pick<FishingSession, 'from' | 'to'
   to: session.to && time > session.to ? time : session.to
 })
 
-const distanceToWater = (photo: PhotoMetadata, water: Water) => {
+const distanceToWater = (i_latitude: number, i_longitude: number, water: Water) => {
   const { latitude, longitude } = water
   if (
     latitude === undefined || longitude === undefined
@@ -15,10 +15,10 @@ const distanceToWater = (photo: PhotoMetadata, water: Water) => {
   ) return Infinity
 
   const radians = Math.PI / 180
-  const latitudeDifference = (latitude - photo.latitude) * radians
-  const longitudeDifference = (longitude - photo.longitude) * radians
+  const latitudeDifference = (latitude - i_latitude) * radians
+  const longitudeDifference = (longitude - i_longitude) * radians
   const haversine = Math.sin(latitudeDifference / 2) ** 2
-    + Math.cos(photo.latitude * radians) * Math.cos(latitude * radians)
+    + Math.cos(i_latitude * radians) * Math.cos(latitude * radians)
     * Math.sin(longitudeDifference / 2) ** 2
   return 6371 * 2 * Math.asin(Math.sqrt(Math.max(0, Math.min(1, haversine))))
 }
@@ -28,10 +28,13 @@ export const planPhotoSession = (
   waters: Water[],
   sessions: FishingSession[]
 ): PhotoSessionPlan => {
-  const nearbyWaters = waters
-    .map((water) => ({ water, distance: distanceToWater(photo, water) }))
+  const latitude = photo.latitude
+  const longitude = photo.longitude
+  const nearbyWaters = (latitude && longitude) ?
+    waters
+    .map((water) => ({ water, distance: distanceToWater(latitude, longitude, water) }))
     .filter((entry) => entry.distance <= 5)
-    .sort((first, second) => first.distance - second.distance || first.water.id.localeCompare(second.water.id))
+    .sort((first, second) => first.distance - second.distance || first.water.id.localeCompare(second.water.id)) : []
   const distanceByWater = new Map(nearbyWaters.map(({ water, distance }) => [water.id, distance]))
   const timeDistance = (session: FishingSession) => Math.max(
     Date.parse(`${session.from}Z`) - Date.parse(`${photo.time}Z`),
@@ -39,9 +42,9 @@ export const planPhotoSession = (
     0
   )
   const session = sessions
-    .filter((entry) => entry.from.slice(0, 10) === photo.time.slice(0, 10) && distanceByWater.has(entry.waterId))
+    .filter((entry) => entry.from.slice(0, 10) === photo.time.slice(0, 10) && (distanceByWater.has(entry.waterId) || !latitude))
     .sort((first, second) =>
-      distanceByWater.get(first.waterId)! - distanceByWater.get(second.waterId)!
+      latitude ? distanceByWater.get(first.waterId)! - distanceByWater.get(second.waterId)! : 0.0
       || timeDistance(first) - timeDistance(second)
       || first.id.localeCompare(second.id)
     )[0]

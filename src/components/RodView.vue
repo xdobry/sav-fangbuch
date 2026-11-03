@@ -36,6 +36,12 @@ defineEmits<{
         <input v-model="form.length" type="number" step="0.1" min="1" class="input" />
       </div>
     </div>
+    <div class="field">
+      <label class="label" for="rod-notes">Notizen (optional)</label>
+      <div class="control">
+        <textarea id="rod-notes" v-model="form.notes" class="textarea" rows="3"></textarea>
+      </div>
+    </div>
     <p v-if="message" class="notification is-warning is-light" role="alert">{{ message }}</p>
     <div class="buttons">
       <button class="button is-link" @click="$emit('submit')">
@@ -48,7 +54,10 @@ defineEmits<{
     <div v-if="rods.length === 0" class="has-text-grey">Keine Ruten vorhanden.</div>
     <ul v-else>
       <li v-for="rod in rods" :key="rod.id" class="rod-row">
-        <span>{{ rod.type }} · {{ rod.length }} m</span>
+        <div class="rod-details">
+          <span>{{ rod.type }} · {{ rod.length }} m</span>
+          <p v-if="rod.notes" class="rod-notes has-text-grey">{{ rod.notes }}</p>
+        </div>
         <span class="buttons are-small">
           <button class="button is-light" @click="$emit('edit', rod.id)">Bearbeiten</button>
           <button class="button is-danger is-light" @click="$emit('delete', rod.id)">Löschen</button>
@@ -63,8 +72,19 @@ defineEmits<{
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0.35rem 0;
+}
+
+.rod-details {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rod-notes {
+  white-space: pre-wrap;
 }
 
 .rod-row .buttons {

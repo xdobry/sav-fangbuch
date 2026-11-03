@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { Water, WaterForm } from '../types'
+import { createId } from '../utils/createId'
+import type { FishingSession, Water, WaterForm } from '../types'
 
 const props = defineProps<{
-  waters: Water[]
-  editingWaterId: string | null
-  message: string
+  sessions: FishingSession[]
 }>()
-const form = defineModel<WaterForm>({ required: true })
+const waters = defineModel<Water[]>('waters', { required: true })
 const emit = defineEmits<{
-  submit: []
-  edit: [waterId: string]
-  delete: [waterId: string]
-  cancelEdit: []
+  save: []
 }>()
+const waterForm = ref<WaterForm>({ name: '', location: '' })
+const editingWaterId = ref<string | null>(null)
+const waterMessage = ref('')
 const isGettingPosition = ref(false)
 const positionError = ref('')
 
 const coordinateError = computed(() => {
-  const { latitude, longitude } = form.value
+  const { latitude, longitude } = waterForm.value
   if ((latitude === undefined) !== (longitude === undefined)) {
     return 'Bitte Breiten- und Längengrad gemeinsam eingeben.'
   }
@@ -32,12 +31,12 @@ const coordinateError = computed(() => {
 })
 
 const isFormValid = computed(() =>
-  Boolean(form.value.name.trim() && form.value.location.trim()) && !coordinateError.value
+  Boolean(waterForm.value.name.trim() && waterForm.value.location.trim()) && !coordinateError.value
 )
 
 const setCoordinate = (coordinate: 'latitude' | 'longitude', event: Event) => {
   const input = event.target as HTMLInputElement
-  form.value[coordinate] = input.value === '' ? undefined : input.valueAsNumber
+  waterForm.value[coordinate] = input.value === '' ? undefined : input.valueAsNumber
   positionError.value = ''
 }
 
@@ -55,8 +54,8 @@ const getCurrentPosition = () => {
   isGettingPosition.value = true
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      form.value.latitude = position.coords.latitude
-      form.value.longitude = position.coords.longitude
+      waterForm.value.latitude = position.coords.latitude
+      waterForm.value.longitude = position.coords.longitude
       isGettingPosition.value = false
     },
     (error) => {
@@ -80,11 +79,64 @@ const openStreetMapUrl = (water: Water) => {
   return `https://www.openstreetmap.org/?mlat=${water.latitude}&mlon=${water.longitude}#map=16/${water.latitude}/${water.longitude}`
 }
 
-const submit = () => {
-  if (isFormValid.value) emit('submit')
+const cancelWaterEdit = () => {
+  editingWaterId.value = null
+  waterForm.value = { name: '', location: '' }
+  waterMessage.value = ''
 }
 
-watch(() => props.editingWaterId, () => {
+const editWater = (waterId: string) => {
+  const water = waters.value.find((entry) => entry.id === waterId)
+  if (!water) return
+
+  editingWaterId.value = water.id
+  waterForm.value = {
+    name: water.name,
+    location: water.location,
+    latitude: water.latitude,
+    longitude: water.longitude
+  }
+  waterMessage.value = ''
+}
+
+const saveWater = () => {
+  if (!isFormValid.value) return
+
+  const waterData = {
+    name: waterForm.value.name.trim(),
+    location: waterForm.value.location.trim(),
+    latitude: waterForm.value.latitude,
+    longitude: waterForm.value.longitude
+  }
+  if (editingWaterId.value) {
+    const index = waters.value.findIndex((water) => water.id === editingWaterId.value)
+    if (index < 0) return
+    waters.value = waters.value.map((water, waterIndex) =>
+      waterIndex === index ? { ...water, ...waterData } : water
+    )
+  } else {
+    waters.value = [{ id: createId(), ...waterData }, ...waters.value]
+  }
+  cancelWaterEdit()
+  emit('save')
+}
+
+const deleteWater = (waterId: string) => {
+  const water = waters.value.find((entry) => entry.id === waterId)
+  if (!water) return
+  if (props.sessions.some((session) => session.waterId === waterId)) {
+    waterMessage.value = 'Dieses Gewässer kann nicht gelöscht werden, da Touren darauf verweisen.'
+    return
+  }
+  if (!window.confirm(`Gewässer „${water.name}“ wirklich löschen?`)) return
+
+  waters.value = waters.value.filter((entry) => entry.id !== waterId)
+  if (editingWaterId.value === waterId) cancelWaterEdit()
+  waterMessage.value = ''
+  emit('save')
+}
+
+watch(editingWaterId, () => {
   positionError.value = ''
 })
 </script>
@@ -97,11 +149,11 @@ watch(() => props.editingWaterId, () => {
         <h2 class="subtitle is-6">{{ editingWaterId ? 'Gewässer bearbeiten' : 'Gewässer erfassen' }}</h2>
         <div class="field">
           <label class="label">Name</label>
-          <div class="control"><input v-model="form.name" class="input" placeholder="z. B. Baggersee" /></div>
+          <div class="control"><input v-model="waterForm.name" class="input" placeholder="z. B. Baggersee" /></div>
         </div>
         <div class="field">
           <label class="label">Standort</label>
-          <div class="control"><input v-model="form.location" class="input" placeholder="z. B. München" /></div>
+          <div class="control"><input v-model="waterForm.location" class="input" placeholder="z. B. München" /></div>
         </div>
         <div class="field">
           <label class="label">GPS-Position (optional)</label>
@@ -110,7 +162,7 @@ watch(() => props.editingWaterId, () => {
               <label class="label" for="water-latitude">Breitengrad</label>
               <input
                 id="water-latitude"
-                :value="form.latitude ?? ''"
+                :value="waterForm.latitude ?? ''"
                 type="number"
                 min="-90"
                 max="90"
@@ -124,7 +176,7 @@ watch(() => props.editingWaterId, () => {
               <label class="label" for="water-longitude">Längengrad</label>
               <input
                 id="water-longitude"
-                :value="form.longitude ?? ''"
+                :value="waterForm.longitude ?? ''"
                 type="number"
                 min="-180"
                 max="180"
@@ -142,12 +194,12 @@ watch(() => props.editingWaterId, () => {
           <p v-if="positionError" class="help is-danger" role="alert">{{ positionError }}</p>
           <p v-if="coordinateError" class="help is-danger" role="alert">{{ coordinateError }}</p>
         </div>
-        <p v-if="message" class="notification is-warning is-light" role="alert">{{ message }}</p>
+        <p v-if="waterMessage" class="notification is-warning is-light" role="alert">{{ waterMessage }}</p>
         <div class="buttons">
-          <button class="button is-primary" :disabled="!isFormValid" @click="submit">
+          <button class="button is-primary" :disabled="!isFormValid" @click="saveWater">
             {{ editingWaterId ? 'Änderungen speichern' : 'Gewässer speichern' }}
           </button>
-          <button v-if="editingWaterId" class="button" type="button" @click="$emit('cancelEdit')">Abbrechen</button>
+          <button v-if="editingWaterId" class="button" type="button" @click="cancelWaterEdit">Abbrechen</button>
         </div>
       </div>
 
@@ -173,8 +225,8 @@ watch(() => props.editingWaterId, () => {
               </td>
               <td>
                 <div class="buttons are-small">
-                  <button class="button is-light" @click="emit('edit', water.id)">Bearbeiten</button>
-                  <button class="button is-danger is-light" @click="emit('delete', water.id)">Löschen</button>
+                  <button class="button is-light" @click="editWater(water.id)">Bearbeiten</button>
+                  <button class="button is-danger is-light" @click="deleteWater(water.id)">Löschen</button>
                 </div>
               </td>
             </tr>

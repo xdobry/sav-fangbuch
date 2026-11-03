@@ -51,11 +51,11 @@ export const defaultWaters: Water[] = [
   { id: 'autobahnweiher', name: 'Autobahnweiher', location: 'Leverkusen',
       latitude: 51.017875417026495, longitude: 7.01031190443649250 },
   { id: 'grosse-ledder', name: 'Große Ledder', location: 'Leverkusen', latitude: 51.099071375174255, longitude: 7.232025280344614 },
-  { id: 'grosser-silbersee', name: 'Großer Silbersee', location: 'Leverkusen', latitude: 51.07135766552641, longitude: 6.9336335602489845 },
+  { id: 'grosser-silbersee', name: 'Großer Silbersee', location: 'Leverkusen', latitude: 51.04701564905807, longitude: 7.0097765516169375 },
   { id: 'hitdorfersee-nord', name: 'Hitdorfersee Nord', location: 'Leverkusen', latitude: 51.07232842931969, longitude: 6.931144470033943 },
   { id: 'kleiner-dehlensee', name: 'Kleiner Dehlensee', location: 'Leverkusen', latitude: 51.06079991045928, longitude: 6.9406035532901384 },
   { id: 'rheinhafen-hitdorf', name: 'Rheinhafen Hitdorf', location: 'Leverkusen', latitude: 51.06024636334001, longitude: 6.913463348581607 },
-  { id: 'stoeckenbergsee', name: 'Stöckenbergsee', location: 'Leverkusen', latitude: 51.04701564905807, longitude: 7.0097765516169375 },
+  { id: 'stoeckenbergsee', name: 'Stöckenbergsee', location: 'Leverkusen', latitude: 51.07135766552641, longitude: 6.9336335602489845 },
   { id: 'wupper', name: 'Wupper', location: 'Leverkusen', latitude: 51.03663340599309, longitude: 7.001051754417278 }
 ]
 
