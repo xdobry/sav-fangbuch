@@ -5,7 +5,7 @@ Ein einfaches, deutschsprachiges digitales Fangbuch. Die Vue-Anwendung hilft dab
 Hier geht es zu der App
 https://xdobry.github.io/sav-fangbuch/
 
-Es funktioniert in Browser uns ist auch nach der PWA-Installation off-line fähig. 
+Es funktioniert im Browser und ist auch nach der PWA-Installation off-line fähig. 
 - Die Daten sind nur auf dem Browser.
 - Es gibt keinen Server.
 - Es ist keine Registierung nötig.
@@ -14,14 +14,14 @@ Es funktioniert in Browser uns ist auch nach der PWA-Installation off-line fähi
 - Quellcode für eigene Anpassungen (Erweiterungen) ist vorhanden
 
 Die Fänge werden einem Tour zugordnet mit vielen Wetterdaten um später Erkentnisse über Beißverhalten zu gewinnen.
-Weil die Daten nur bei dem Gerät sind, muss man bei wechsel des Geräts die Daten exportieren und wieder importieren.
-Man sollte auch regelmäßig zur Sicherung die Daten exportieren und z.B bei einem cloud driver sichern.
+Weil die Daten nur bei dem Gerät sind, muss man beim Wechsel des Geräts die Daten exportieren und wieder importieren.
+Man sollte regelmäßig zur Sicherung die Daten exportieren und z.B bei einem Cloud-Driver sichern.
 
 ## Funktionen
 
 - Touren mit Zeitraum, Gewässer und Wetterdaten erfassen
 - Automaitsch das Gewässer aus GPS-Lokation ermitteln
-- Autoamtisch GPS-Lokation setzen
+- Automatisch GPS-Lokation setzen
 - Automatisch Wetter Daten aus dem open-meteo.com ermitteln
 - Startseite mit aktiver Tour, schnellem Fang erfassen und den letzten zehn Fängen
 - Fänge einer Tour zuordnen und mit Fischart, Länge, Gewicht, Rute, Köder und Notizen dokumentieren
